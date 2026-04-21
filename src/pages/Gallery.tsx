@@ -294,17 +294,6 @@ export default function Gallery() {
                 onClick={() => setSelectedId(item.id)}
                 className="relative group cursor-pointer overflow-hidden rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-6 shadow-2xl"
               >
-                <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-                  <motion.span 
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    whileHover={{ scale: 1, opacity: 1 }}
-                    className="relative z-10 font-tech text-accent text-[10px] tracking-[0.3em] border border-accent/30 bg-black/60 px-6 py-2 uppercase italic"
-                  >
-                    VIEW_FULL_MANIFEST
-                  </motion.span>
-                </div>
-
                 {item.type === 'video' ? (
                   <video
                     src={mediaUrl}
@@ -328,12 +317,6 @@ export default function Gallery() {
                     }}
                   />
                 )}
-
-                <div className="absolute bottom-4 left-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <p className="font-tech text-[8px] text-accent tracking-[0.4em] uppercase bg-black/40 px-2 py-1 backdrop-blur-md border-l-2 border-accent">
-                    {item.title || 'UNNAMED_OBJECT'}
-                  </p>
-                </div>
               </motion.div>
             );
           })}
@@ -372,23 +355,14 @@ export default function Gallery() {
                 <video
                   src={items.find(i => i.id === selectedId)?.url}
                   autoPlay loop muted playsInline controls
-                  className="w-full h-auto max-h-[80vh] object-contain"
+                  className="w-full h-auto max-h-[90vh] object-contain"
                 />
               ) : (
                 <img
                   src={items.find(i => i.id === selectedId)?.url}
-                  className="w-full h-auto max-h-[80vh] object-contain"
+                  className="w-full h-auto max-h-[90vh] object-contain"
                 />
               )}
-
-              <div className="p-8 bg-surface">
-                <h3 className="text-3xl font-display uppercase text-white mb-2">
-                  {items.find(i => i.id === selectedId)?.title}
-                </h3>
-                <p className="font-tech text-xs text-accent tracking-[0.3em] uppercase">
-                  Original_Manifest_Data
-                </p>
-              </div>
             </motion.div>
           </motion.div>
         )}
