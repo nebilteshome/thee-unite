@@ -84,9 +84,19 @@ export default function Admin() {
     }
   };
 
-  const handleLogin = () => {
-    const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider);
+  const handleLogin = async () => {
+    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+      alert("CRITICAL_ERROR: Firebase configuration is missing. Please ensure all VITE_FIREBASE_* environment variables are set in Vercel.");
+      return;
+    }
+
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    } catch (error: any) {
+      console.error("Auth Error:", error);
+      alert(`AUTH_FAILED: ${error.message}`);
+    }
   };
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent">SYNCHRONIZING_CORE...</div>;
