@@ -597,6 +597,16 @@ export function GalleryManager() {
     const { clientX, clientY, ctrlKey, shiftKey } = e;
     setDragCurrent({ x: clientX, y: clientY });
 
+    // --- AUTO-SCROLL LOGIC ---
+    const edgeThreshold = 100;
+    const viewportHeight = window.innerHeight;
+    
+    if (clientY < edgeThreshold) {
+      window.scrollBy({ top: -15, behavior: 'auto' });
+    } else if (clientY > viewportHeight - edgeThreshold) {
+      window.scrollBy({ top: 15, behavior: 'auto' });
+    }
+
     if (mouseMoveFrame.current) cancelAnimationFrame(mouseMoveFrame.current);
 
     mouseMoveFrame.current = requestAnimationFrame(() => {
@@ -907,6 +917,12 @@ export function GalleryManager() {
     });
   };
 
+  const getFullUrl = (url: string) => {
+    if (!url) return '';
+    if (url.startsWith('http') || url.startsWith('blob:') || url.startsWith('data:')) return url;
+    return url; // Assuming relative paths like /files/ or /hero/ are served from public
+  };
+
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
       {alert && <Alert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
@@ -1051,28 +1067,28 @@ export function GalleryManager() {
               key={item.id} 
               ref={el => el ? itemRefs.current.set(`gallery-${i}`, el) : itemRefs.current.delete(`gallery-${i}`)}
               onClick={(e) => { e.stopPropagation(); toggleGallerySelection(item.id); }}
-              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedGallery.has(getItemKey(item)) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+              className={`relative aspect-[4/5] bg-surface border rounded-xl overflow-hidden transition-all cursor-pointer group ${selectedGallery.has(getItemKey(item)) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {item.type === 'video' ? (
-                <video src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                <video src={getFullUrl(item.url)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
               ) : (
-                <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+                <img src={getFullUrl(item.url)} alt={item.title} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
               )}
               
-              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedGallery.has(getItemKey(item)) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+              <div className={`absolute top-6 left-6 w-8 h-8 rounded-lg border-2 flex items-center justify-center z-10 transition-all ${selectedGallery.has(getItemKey(item)) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
                 <Plus size={18} className={selectedGallery.has(getItemKey(item)) ? 'rotate-45' : ''} />
               </div>
 
-              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6 z-20" onClick={(e) => e.stopPropagation()}>
                 <div className="flex gap-3">
-                  <button onClick={() => handleMove(i, 'up')} disabled={i === 0} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded transition-all disabled:opacity-0"><ChevronRight size={20} className="-rotate-90" /></button>
-                  <button onClick={() => handleMove(i, 'down')} disabled={i === items.length - 1} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded transition-all disabled:opacity-0"><ChevronRight size={20} className="rotate-90" /></button>
+                  <button onClick={() => handleMove(i, 'up')} disabled={i === 0} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded-lg transition-all disabled:opacity-0"><ChevronRight size={20} className="-rotate-90" /></button>
+                  <button onClick={() => handleMove(i, 'down')} disabled={i === items.length - 1} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded-lg transition-all disabled:opacity-0"><ChevronRight size={20} className="rotate-90" /></button>
                 </div>
                 <button onClick={() => handleDelete(item.id)} className="p-4 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all">
                   <Trash2 size={24} />
                 </button>
               </div>
-              {item.type === 'video' && <Video size={20} className="absolute top-6 right-6 text-accent" />}
+              {item.type === 'video' && <Video size={20} className="absolute top-6 right-6 text-accent z-10" />}
             </div>
           ))
         ) : (
@@ -1081,27 +1097,27 @@ export function GalleryManager() {
               key={file} 
               ref={el => el ? itemRefs.current.set(`repository-${i}`, el) : itemRefs.current.delete(`repository-${i}`)}
               onClick={(e) => { e.stopPropagation(); toggleRepoSelection(file); }}
-              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+              className={`relative aspect-[4/5] bg-surface border rounded-xl overflow-hidden transition-all cursor-pointer group ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {isVideo(file) ? (
-                <video src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
+                <video src={getFullUrl(`/files/${file}`)} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
               ) : (
-                <img src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
+                <img src={getFullUrl(`/files/${file}`)} alt={file} className="w-full h-full object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-500" />
               )}
 
-              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+              <div className={`absolute top-6 left-6 w-8 h-8 rounded-lg border-2 flex items-center justify-center z-10 transition-all ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
                 <Plus size={18} />
               </div>
 
-              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4 z-20" onClick={(e) => e.stopPropagation()}>
                 <button 
                   onClick={() => handlePublishFromRepo(file)}
-                  className="bg-accent text-black px-6 py-3 font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all flex items-center gap-2"
+                  className="bg-accent text-black px-6 py-3 rounded-lg font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all flex items-center gap-2"
                 >
                   <Plus size={16} /> SEND_TO_GALLERY
                 </button>
               </div>
-              {isVideo(file) && <Video size={20} className="absolute top-6 right-6 text-accent" />}
+              {isVideo(file) && <Video size={20} className="absolute top-6 right-6 text-accent z-10" />}
             </div>
           ))
         )}
