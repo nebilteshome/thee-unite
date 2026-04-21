@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, Save, Image as ImageIcon, ChevronRight, Lock, 
@@ -523,6 +523,22 @@ export function ProductManager() {
   );
 }
 
+// --- UI Helpers ---
+
+function SelectionBox({ start, current }: { start: { x: number, y: number }, current: { x: number, y: number } }) {
+  const left = Math.min(start.x, current.x);
+  const top = Math.min(start.y, current.y);
+  const width = Math.abs(start.x - current.x);
+  const height = Math.abs(start.y - current.y);
+
+  return (
+    <div 
+      className="fixed z-[150] border-2 border-accent bg-accent/10 pointer-events-none"
+      style={{ left, top, width, height }}
+    />
+  );
+}
+
 export function GalleryManager() {
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [repoAssets, setRepoAssets] = useState<string[]>([]);
@@ -534,6 +550,12 @@ export function GalleryManager() {
 
   const [selectedGallery, setSelectedGallery] = useState<Set<string>>(new Set());
   const [selectedRepo, setSelectedRepo] = useState<Set<string>>(new Set());
+
+  // Drag Selection State
+  const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
+  const [dragCurrent, setDragCurrent] = useState<{ x: number, y: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   // Feedback State
   const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
@@ -551,6 +573,79 @@ export function GalleryManager() {
   });
 
   useEffect(() => { fetchGallery(); }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only trigger on left click
+    if (e.button !== 0) return;
+    
+    // Disable on mobile
+    if (window.matchMedia('(pointer: coarse)').matches) return;
+
+    // If clicking an interactive element, don't start drag
+    if ((e.target as HTMLElement).closest('button, input, label, a')) return;
+
+    setDragStart({ x: e.clientX, y: e.y });
+    setDragCurrent({ x: e.clientX, y: e.y });
+
+    // Clear selection if not holding modifier keys
+    if (!e.ctrlKey && !e.shiftKey) {
+      setSelectedGallery(new Set());
+      setSelectedRepo(new Set());
+    }
+  };
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!dragStart) return;
+    setDragCurrent({ x: e.clientX, y: e.clientY });
+
+    // Hit Detection
+    const box = {
+      left: Math.min(dragStart.x, e.clientX),
+      top: Math.min(dragStart.y, e.clientY),
+      right: Math.max(dragStart.x, e.clientX),
+      bottom: Math.max(dragStart.y, e.clientY)
+    };
+
+    const newSelection = new Set<string>();
+    itemRefs.current.forEach((el, id) => {
+      const rect = el.getBoundingClientRect();
+      const overlap = !(rect.right < box.left || 
+                        rect.left > box.right || 
+                        rect.bottom < box.top || 
+                        rect.top > box.bottom);
+      if (overlap) newSelection.add(id);
+    });
+
+    if (activeSubTab === 'gallery') {
+      setSelectedGallery(prev => {
+        const combined = e.ctrlKey || e.shiftKey ? new Set(prev) : new Set();
+        newSelection.forEach(id => combined.add(id));
+        return combined;
+      });
+    } else {
+      setSelectedRepo(prev => {
+        const combined = e.ctrlKey || e.shiftKey ? new Set(prev) : new Set();
+        newSelection.forEach(id => combined.add(id));
+        return combined;
+      });
+    }
+  }, [dragStart, activeSubTab]);
+
+  const handleMouseUp = useCallback(() => {
+    setDragStart(null);
+    setDragCurrent(null);
+  }, []);
+
+  useEffect(() => {
+    if (dragStart) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [dragStart, handleMouseMove, handleMouseUp]);
 
   const fetchGallery = async () => {
     try {
@@ -798,6 +893,8 @@ export function GalleryManager() {
         isDestructive={modal.isDestructive}
       />
 
+      {dragStart && dragCurrent && <SelectionBox start={dragStart} current={dragCurrent} />}
+
       {showPicker && (
         <AssetPicker 
           excludeUrls={items.map(i => i.url)}
@@ -917,12 +1014,17 @@ export function GalleryManager() {
       </AnimatePresence>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+      <div 
+        ref={gridRef}
+        onMouseDown={handleMouseDown}
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 select-none"
+      >
         {activeSubTab === 'gallery' ? (
           items.map((item, i) => (
             <div 
               key={item.id} 
-              onClick={() => toggleGallerySelection(item.id)}
+              ref={el => el ? itemRefs.current.set(item.id, el) : itemRefs.current.delete(item.id)}
+              onClick={(e) => { e.stopPropagation(); toggleGallerySelection(item.id); }}
               className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedGallery.has(item.id) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {item.type === 'video' ? (
@@ -951,7 +1053,8 @@ export function GalleryManager() {
           repoAssets.map((file) => (
             <div 
               key={file} 
-              onClick={() => toggleRepoSelection(file)}
+              ref={el => el ? itemRefs.current.set(file, el) : itemRefs.current.delete(file)}
+              onClick={(e) => { e.stopPropagation(); toggleRepoSelection(file); }}
               className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedRepo.has(file) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {isVideo(file) ? (
