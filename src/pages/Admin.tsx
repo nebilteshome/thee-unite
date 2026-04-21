@@ -167,6 +167,26 @@ function TabButton({ active, onClick, icon, label }: { active: boolean, onClick:
 }
 
 function LoginView({ user, adminStatus, onLogin }: any) {
+  const [bootstrapping, setBootstrapping] = useState(false);
+
+  const handleBootstrap = async () => {
+    if (!user) return;
+    setBootstrapping(true);
+    try {
+      await setDoc(doc(db, 'admins', user.uid), {
+        email: user.email,
+        role: 'super_admin',
+        manifestedAt: new Date().toISOString()
+      });
+      alert('ADMIN_AUTHORIZED: Reloading core...');
+      window.location.reload();
+    } catch (e: any) {
+      alert(`BOOTSTRAP_FAILED: ${e.message}`);
+    } finally {
+      setBootstrapping(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
       <Lock className="text-accent mb-8" size={64} />
@@ -181,9 +201,21 @@ function LoginView({ user, adminStatus, onLogin }: any) {
         INITIATE_AUTH <ChevronRight size={18} />
       </button>
       {user && !adminStatus && (
-        <p className="mt-8 text-red-500 font-tech text-[10px] uppercase tracking-widest">
-          Identity verified: {user.email}<br/>But authorization is missing.
-        </p>
+        <div className="mt-12 space-y-4">
+          <p className="text-red-500 font-tech text-[10px] uppercase tracking-widest">
+            Identity verified: {user.email}<br/>But authorization is missing.
+          </p>
+          {user.email === 'fffg3839@gmail.com' && (
+            <button 
+              disabled={bootstrapping}
+              onClick={handleBootstrap}
+              className="text-[10px] font-black uppercase text-accent underline underline-offset-8 flex items-center gap-2 mx-auto"
+            >
+              {bootstrapping ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />}
+              BOOTSTRAP_ADMIN_PRIVILEGES
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
@@ -330,8 +362,8 @@ function ProductManager() {
       }
       resetForm();
       fetchProducts();
-    } catch (err) {
-      alert('Save failed');
+    } catch (err: any) {
+      alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -494,10 +526,15 @@ function GalleryManager() {
   useEffect(() => { fetchGallery(); }, []);
 
   const fetchGallery = async () => {
-    const q = query(collection(db, 'gallery'), orderBy('order'));
-    const snapshot = await getDocs(q);
-    setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem)));
-    setLoading(false);
+    try {
+      const q = query(collection(db, 'gallery'), orderBy('order'));
+      const snapshot = await getDocs(q);
+      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem)));
+    } catch (err: any) {
+      console.error("Gallery fetch failed:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -528,6 +565,7 @@ function GalleryManager() {
     setSaving(true);
     try {
       const res = await fetch('/assets.json');
+      if (!res.ok) throw new Error('Could not load assets.json');
       const files: string[] = await res.json();
       const batch = writeBatch(db);
       
@@ -546,8 +584,9 @@ function GalleryManager() {
       await batch.commit();
       fetchGallery();
       alert('SYNCHRONIZATION_COMPLETE');
-    } catch (err) {
-      alert('Sync failed');
+    } catch (err: any) {
+      console.error(err);
+      alert(`Sync failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -686,8 +725,8 @@ function HeroManager() {
     try {
       await setDoc(doc(db, 'settings', 'hero'), hero);
       alert('Hero synchronized');
-    } catch (err) {
-      alert('Save failed');
+    } catch (err: any) {
+      alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -774,8 +813,8 @@ function PaymentManager() {
     try {
       await setDoc(doc(db, 'settings', 'payments'), payments);
       alert('Payment settings secured');
-    } catch (err) {
-      alert('Save failed');
+    } catch (err: any) {
+      alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
