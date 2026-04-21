@@ -11,6 +11,7 @@ import {
   updateDoc, query, orderBy, getDoc, setDoc, writeBatch
 } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { Link, NavLink, Outlet, useLocation, Navigate } from 'react-router-dom';
 
 // --- Types ---
 
@@ -59,7 +60,6 @@ export default function Admin() {
   const [user, setUser] = useState<any>(null);
   const [adminStatus, setAdminStatus] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'hero' | 'gallery' | 'products' | 'payments'>('products');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -116,10 +116,10 @@ export default function Admin() {
         </div>
 
         <nav className="flex flex-col gap-2 flex-1">
-          <TabButton active={activeTab === 'products'} onClick={() => setActiveTab('products')} icon={<ShoppingBag size={18} />} label="PRODUCTS" />
-          <TabButton active={activeTab === 'gallery'} onClick={() => setActiveTab('gallery')} icon={<ImageIcon size={18} />} label="GALLERY" />
-          <TabButton active={activeTab === 'hero'} onClick={() => setActiveTab('hero')} icon={<LayoutIcon size={18} />} label="HERO_SECTION" />
-          <TabButton active={activeTab === 'payments'} onClick={() => setActiveTab('payments')} icon={<CreditCard size={18} />} label="PAYMENTS" />
+          <TabButton to="/admin/products" icon={<ShoppingBag size={18} />} label="PRODUCTS" />
+          <TabButton to="/admin/gallerycore" icon={<ImageIcon size={18} />} label="GALLERY" />
+          <TabButton to="/admin/heros" icon={<LayoutIcon size={18} />} label="HERO_SECTION" />
+          <TabButton to="/admin/payments" icon={<CreditCard size={18} />} label="PAYMENTS" />
         </nav>
 
         <div className="pt-6 border-t border-white/10">
@@ -140,12 +140,7 @@ export default function Admin() {
 
       {/* Main Content Area */}
       <main className="flex-1 overflow-y-auto p-6 md:p-12 lg:p-16">
-        <AnimatePresence mode="wait">
-          {activeTab === 'products' && <ProductManager key="products" />}
-          {activeTab === 'gallery' && <GalleryManager key="gallery" />}
-          {activeTab === 'hero' && <HeroManager key="hero" />}
-          {activeTab === 'payments' && <PaymentManager key="payments" />}
-        </AnimatePresence>
+        <Outlet />
       </main>
     </div>
   );
@@ -153,16 +148,16 @@ export default function Admin() {
 
 // --- Global UI Helpers ---
 
-function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
+function TabButton({ to, icon, label }: { to: string, icon: React.ReactNode, label: string }) {
   return (
-    <button 
-      onClick={onClick}
-      className={`flex items-center gap-4 px-4 py-4 font-black italic uppercase text-xs tracking-widest transition-all ${
-        active ? 'bg-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'
+    <NavLink 
+      to={to}
+      className={({ isActive }) => `flex items-center gap-4 px-4 py-4 font-black italic uppercase text-xs tracking-widest transition-all ${
+        isActive ? 'bg-accent text-black' : 'text-white/40 hover:text-white hover:bg-white/5'
       }`}
     >
       {icon} {label}
-    </button>
+    </NavLink>
   );
 }
 
@@ -221,7 +216,7 @@ function LoginView({ user, adminStatus, onLogin }: any) {
   );
 }
 
-function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
+function AssetPicker({ onSelect, onClose, excludeUrls = [] }: { onSelect: (url: string) => void, onClose: () => void, excludeUrls?: string[] }) {
   const [assets, setAssets] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -234,7 +229,8 @@ function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, o
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setAssets(data);
+          const excludeSet = new Set(excludeUrls);
+          setAssets(data.filter(file => !excludeSet.has(`/files/${file}`)));
         } else {
           throw new Error("Asset data is not a valid list");
         }
@@ -244,7 +240,7 @@ function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, o
         alert(`LIBRARY_LOAD_FAILED: ${err.message}. Ensure deployment is complete.`);
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [excludeUrls]);
 
   const filtered = assets.filter(a => a.toLowerCase().includes(search.toLowerCase()));
 
@@ -311,7 +307,7 @@ function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, o
 
 // --- Managers ---
 
-function ProductManager() {
+export function ProductManager() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isEditing, setIsEditing] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -342,8 +338,9 @@ function ProductManager() {
     if (!e.target.files?.length) return;
     setSaving(true);
     try {
+      const files = Array.from(e.target.files) as File[];
       const urls = await Promise.all(
-        Array.from(e.target.files).map(file => uploadFile(file, `products/${Date.now()}_${file.name}`))
+        files.map(file => uploadFile(file, `products/${Date.now()}_${file.name}`))
       );
       setFormData(prev => ({ ...prev, images: [...prev.images, ...urls] }));
     } catch (err) {
@@ -526,12 +523,17 @@ function ProductManager() {
   );
 }
 
-function GalleryManager() {
+export function GalleryManager() {
   const [items, setItems] = useState<GalleryItem[]>([]);
+  const [repoAssets, setRepoAssets] = useState<string[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<'gallery' | 'repository'>('gallery');
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+
+  const [selectedGallery, setSelectedGallery] = useState<Set<string>>(new Set());
+  const [selectedRepo, setSelectedRepo] = useState<Set<string>>(new Set());
 
   useEffect(() => { fetchGallery(); }, []);
 
@@ -539,7 +541,9 @@ function GalleryManager() {
     try {
       const q = query(collection(db, 'gallery'), orderBy('order'));
       const snapshot = await getDocs(q);
-      setItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem)));
+      const galleryItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GalleryItem));
+      setItems(galleryItems);
+      await fetchRepoAssets(galleryItems);
     } catch (err: any) {
       console.error("Gallery fetch failed:", err);
     } finally {
@@ -547,40 +551,81 @@ function GalleryManager() {
     }
   };
 
+  const isVideo = (filename: string) => /\.(mp4|webm|ogg|mov|avi|mkv|3gp|flv|wmv)$/i.test(filename);
+
+  const fetchRepoAssets = async (currentItems: GalleryItem[]) => {
+    try {
+      const res = await fetch('/assets.json');
+      if (!res.ok) return;
+      const allFiles: string[] = await res.json();
+
+      const galleryUrls = new Set(currentItems.map(item => item.url));
+      // Only include files from GitHub that aren't already in the live gallery
+      const available = allFiles.filter(file => !galleryUrls.has(`/files/${file}`));
+      setRepoAssets(available);
+    } catch (err) {
+      console.error("Repo fetch failed:", err);
+    }
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.length) return;
     setUploading(true);
     try {
-      const file = e.target.files[0];
-      const type = file.type.startsWith('video') ? 'video' : 'image';
-      const url = await uploadFile(file, `gallery/${Date.now()}_${file.name}`);
-      
-      await addDoc(collection(db, 'gallery'), {
-        url,
-        type,
-        title: file.name.split('.')[0].toUpperCase(),
-        order: items.length,
-        createdAt: new Date().toISOString()
-      });
+      const files = Array.from(e.target.files) as File[];
+      const batch = writeBatch(db);
+
+      for (const file of files) {
+        const type = file.type.startsWith('video') ? 'video' : 'image';
+        const url = await uploadFile(file, `gallery/${Date.now()}_${file.name}`);
+        const docRef = doc(collection(db, 'gallery'));
+        batch.set(docRef, {
+          url,
+          type,
+          title: file.name.split('.')[0].toUpperCase(),
+          order: items.length,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      await batch.commit();
       fetchGallery();
     } catch (err) {
       alert('Upload failed');
     } finally {
       setUploading(false);
     }
-  };
+    };
 
-  const handleSyncLocal = async () => {
-    if (!confirm('Sync all files from GitHub "public/files" to Gallery?')) return;
+    const handlePublishFromRepo = async (file: string) => {
     setSaving(true);
     try {
-      const res = await fetch('/assets.json');
-      if (!res.ok) throw new Error('Could not load assets.json');
-      const files: string[] = await res.json();
+      const type = isVideo(file) ? 'video' : 'image';
+      await addDoc(collection(db, 'gallery'), {
+        url: `/files/${file}`,
+        type,
+        title: file.split('.')[0].toUpperCase(),
+        order: items.length,
+        createdAt: new Date().toISOString()
+      });
+      await fetchGallery();
+      alert('ITEM_SENT_TO_GALLERY');
+    } catch (err: any) {
+      alert(`Publish failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+    };
+
+    const handleBulkPublish = async () => {
+    if (selectedRepo.size === 0) return;
+    setSaving(true);
+    try {
       const batch = writeBatch(db);
-      
-      files.forEach((file, i) => {
-        const type = file.endsWith('.mp4') ? 'video' : 'image';
+      const selectedArray = Array.from(selectedRepo) as string[];
+
+      selectedArray.forEach((file, i) => {
+        const type = isVideo(file) ? 'video' : 'image';
         const docRef = doc(collection(db, 'gallery'));
         batch.set(docRef, {
           url: `/files/${file}`,
@@ -590,25 +635,70 @@ function GalleryManager() {
           createdAt: new Date().toISOString()
         });
       });
-      
+
       await batch.commit();
-      fetchGallery();
-      alert('SYNCHRONIZATION_COMPLETE');
+      setSelectedRepo(new Set());
+      await fetchGallery();
+      alert(`SUCCESS: ${selectedArray.length} items sent to gallery page.`);
     } catch (err: any) {
-      console.error(err);
-      alert(`Sync failed: ${err.message}`);
+      alert(`Publish failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
+    };
+
+
+  const handleBulkDelete = async () => {
+    if (selectedGallery.size === 0) return;
+    if (!confirm(`ERASE ${selectedGallery.size} ITEMS FROM WEBSITE?`)) return;
+    
+    setSaving(true);
+    try {
+      const batch = writeBatch(db);
+      selectedGallery.forEach(id => {
+        batch.delete(doc(db, 'gallery', id));
+      });
+      await batch.commit();
+      setSelectedGallery(new Set());
+      await fetchGallery();
+    } catch (err: any) {
+      alert(`Deletion failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSyncLocal = async () => {
+    setSaving(true);
+    try {
+      await fetchGallery();
+      alert('REPOSITORY_SYNCED: New files from GitHub identified.');
+    } catch (err: any) {
+      alert(`Refresh failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleGallerySelection = (id: string) => {
+    const next = new Set(selectedGallery);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedGallery(next);
+  };
+
+  const toggleRepoSelection = (file: string) => {
+    const next = new Set(selectedRepo);
+    if (next.has(file)) next.delete(file);
+    else next.add(file);
+    setSelectedRepo(next);
   };
 
   const handleMove = async (index: number, direction: 'up' | 'down') => {
     const newItems = [...items];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newItems.length) return;
-
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
-    
     setSaving(true);
     try {
       await Promise.all(newItems.map((item, i) => updateDoc(doc(db, 'gallery', item.id), { order: i })));
@@ -619,7 +709,7 @@ function GalleryManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Erase from history?')) return;
+    if (!confirm('ERASE FROM WEBSITE?')) return;
     await deleteDoc(doc(db, 'gallery', id));
     fetchGallery();
   };
@@ -628,13 +718,14 @@ function GalleryManager() {
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
       {showPicker && (
         <AssetPicker 
+          excludeUrls={items.map(i => i.url)}
           onSelect={async (url) => {
             setShowPicker(false);
             setSaving(true);
             try {
               await addDoc(collection(db, 'gallery'), {
                 url,
-                type: url.endsWith('.mp4') ? 'video' : 'image',
+                type: isVideo(url) ? 'video' : 'image',
                 title: url.split('/').pop()?.split('.')[0].toUpperCase(),
                 order: items.length,
                 createdAt: new Date().toISOString()
@@ -649,59 +740,156 @@ function GalleryManager() {
         />
       )}
 
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+      {/* Header following screenshot style */}
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
         <div>
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter">GALLERY_CORE</h2>
-          <p className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em] mt-2">Manifesting visuals from domain storage</p>
+          <h2 className="text-6xl font-black italic uppercase tracking-tighter leading-none mb-4">GALLERY_CORE</h2>
+          <p className="text-xs font-tech text-white/30 uppercase tracking-[0.6em]">Manifesting visuals from domain storage</p>
+          
+          <div className="flex gap-8 mt-8 border-b border-white/10">
+            <button 
+              onClick={() => setActiveSubTab('gallery')}
+              className={`text-[11px] font-black uppercase tracking-[0.4em] pb-3 transition-all relative ${activeSubTab === 'gallery' ? 'text-accent' : 'text-white/20 hover:text-white'}`}
+            >
+              LIVE_WEBSITE ({items.length})
+              {activeSubTab === 'gallery' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />}
+            </button>
+            <button 
+              onClick={() => setActiveSubTab('repository')}
+              className={`text-[11px] font-black uppercase tracking-[0.4em] pb-3 transition-all relative ${activeSubTab === 'repository' ? 'text-accent' : 'text-white/20 hover:text-white'}`}
+            >
+              IMPORT_STAGING ({repoAssets.length})
+              {activeSubTab === 'repository' && <motion.div layoutId="activeTab" className="absolute bottom-0 left-0 right-0 h-1 bg-accent" />}
+            </button>
+          </div>
         </div>
+
         <div className="flex flex-wrap gap-4">
-          {saving && <Loader2 size={16} className="animate-spin text-accent" />}
           <button 
             onClick={handleSyncLocal}
-            className="bg-white/5 border border-white/10 text-white/40 px-6 py-3 font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:border-accent hover:text-accent transition-all"
+            className="bg-white/5 border border-white/10 text-white/60 px-8 py-4 font-black uppercase text-[10px] tracking-[0.3em] flex items-center gap-3 hover:border-accent hover:text-accent transition-all"
           >
             <Database size={16} /> SYNC_LOCAL_FILES
           </button>
           <button 
             onClick={() => setShowPicker(true)}
-            className="bg-accent/10 border border-accent/20 text-accent px-6 py-3 font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:bg-accent hover:text-black transition-all"
+            className="bg-accent/10 border border-accent/20 text-accent px-8 py-4 font-black uppercase text-[10px] tracking-[0.3em] flex items-center gap-3 hover:bg-accent hover:text-black transition-all"
           >
             <Database size={16} /> LIBRARY
           </button>
-          <label className="bg-accent text-black px-8 py-3 font-black uppercase text-xs tracking-widest cursor-pointer flex items-center gap-2 hover:bg-white transition-all">
+          <label className="bg-accent text-black px-10 py-4 font-black uppercase text-[10px] tracking-[0.3em] cursor-pointer flex items-center gap-3 hover:bg-white transition-all">
             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
             ADD_MEDIA
-            <input type="file" className="hidden" accept="image/*,video/*" onChange={handleUpload} />
+            <input type="file" multiple className="hidden" accept="image/*,video/*" onChange={handleUpload} />
           </label>
         </div>
       </header>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {items.map((item, i) => (
-          <div key={item.id} className="relative aspect-square bg-surface border border-white/5 group overflow-hidden">
-            {item.type === 'video' ? (
-              <video src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0" />
-            ) : (
-              <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0" />
-            )}
-            <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4">
-              <div className="flex gap-2">
-                <button onClick={() => handleMove(i, 'up')} disabled={i === 0} className="p-2 bg-white/10 hover:bg-accent hover:text-black rounded disabled:opacity-0 transition-all"><ChevronRight size={16} className="-rotate-90" /></button>
-                <button onClick={() => handleMove(i, 'down')} disabled={i === items.length - 1} className="p-2 bg-white/10 hover:bg-accent hover:text-black rounded disabled:opacity-0 transition-all"><ChevronRight size={16} className="rotate-90" /></button>
-              </div>
-              <button onClick={() => handleDelete(item.id)} className="p-3 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all">
-                <Trash2 size={20} />
+      {/* Bulk Action Bar */}
+      <AnimatePresence>
+        {((activeSubTab === 'gallery' && selectedGallery.size > 0) || (activeSubTab === 'repository' && selectedRepo.size > 0)) && (
+          <motion.div 
+            initial={{ y: 50, opacity: 0 }} 
+            animate={{ y: 0, opacity: 1 }} 
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-12 left-1/2 -translate-x-1/2 z-50 bg-black border border-accent/30 p-4 rounded-full flex items-center gap-8 shadow-2xl shadow-accent/20 backdrop-blur-xl"
+          >
+            <span className="text-[10px] font-black italic uppercase tracking-widest pl-4">
+              {activeSubTab === 'gallery' ? `${selectedGallery.size} ITEMS SELECTED` : `${selectedRepo.size} ITEMS STAGED`}
+            </span>
+            <div className="flex gap-2">
+              {activeSubTab === 'gallery' ? (
+                <button onClick={handleBulkDelete} className="bg-red-500 text-white px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-red-600 transition-all flex items-center gap-2">
+                  <Trash2 size={14} /> DELETE_FROM_WEBSITE
+                </button>
+              ) : (
+                <button onClick={handleBulkPublish} className="bg-accent text-black px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all flex items-center gap-2">
+                  <Plus size={14} /> SENT_TO_GALLERY_PAGE
+                </button>
+              )}
+              <button 
+                onClick={() => { setSelectedGallery(new Set()); setSelectedRepo(new Set()); }}
+                className="bg-white/10 text-white px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-white/20 transition-all"
+              >
+                CANCEL
               </button>
             </div>
-            {item.type === 'video' && <Video size={16} className="absolute top-2 right-2 text-white/50" />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Content Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        {activeSubTab === 'gallery' ? (
+          items.map((item, i) => (
+            <div 
+              key={item.id} 
+              onClick={() => toggleGallerySelection(item.id)}
+              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedGallery.has(item.id) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+            >
+              {item.type === 'video' ? (
+                <video src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+              ) : (
+                <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
+              )}
+              
+              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedGallery.has(item.id) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+                <Plus size={18} className={selectedGallery.has(item.id) ? 'rotate-45' : ''} />
+              </div>
+
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6" onClick={(e) => e.stopPropagation()}>
+                <div className="flex gap-3">
+                  <button onClick={() => handleMove(i, 'up')} disabled={i === 0} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded transition-all disabled:opacity-0"><ChevronRight size={20} className="-rotate-90" /></button>
+                  <button onClick={() => handleMove(i, 'down')} disabled={i === items.length - 1} className="p-3 bg-white/10 hover:bg-accent hover:text-black rounded transition-all disabled:opacity-0"><ChevronRight size={20} className="rotate-90" /></button>
+                </div>
+                <button onClick={() => handleDelete(item.id)} className="p-4 bg-red-500/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all">
+                  <Trash2 size={24} />
+                </button>
+              </div>
+              {item.type === 'video' && <Video size={20} className="absolute top-6 right-6 text-accent" />}
+            </div>
+          ))
+        ) : (
+          repoAssets.map((file) => (
+            <div 
+              key={file} 
+              onClick={() => toggleRepoSelection(file)}
+              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedRepo.has(file) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+            >
+              {isVideo(file) ? (
+                <video src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
+              ) : (
+                <img src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
+              )}
+
+              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedRepo.has(file) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+                <Plus size={18} />
+              </div>
+
+              <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-4" onClick={(e) => e.stopPropagation()}>
+                <button 
+                  onClick={() => handlePublishFromRepo(file)}
+                  className="bg-accent text-black px-6 py-3 font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all flex items-center gap-2"
+                >
+                  <Plus size={16} /> SENT_TO_GALLERY
+                </button>
+              </div>
+              {isVideo(file) && <Video size={20} className="absolute top-6 right-6 text-accent" />}
+            </div>
+          ))
+        )}
+        
+        {(activeSubTab === 'repository' && repoAssets.length === 0) && (
+          <div className="col-span-full py-32 text-center border border-dashed border-white/10 rounded-2xl">
+            <p className="font-tech text-xs text-white/20 uppercase tracking-[1em]">NO_NEW_ASSETS_IN_DOMAIN_STORAGE</p>
           </div>
-        ))}
+        )}
       </div>
     </motion.div>
   );
 }
 
-function HeroManager() {
+export function HeroManager() {
   const [hero, setHero] = useState<HeroSettings>({
     title: 'THEE UNITE',
     tagline: 'EST 2024',
@@ -802,7 +990,7 @@ function HeroManager() {
   );
 }
 
-function PaymentManager() {
+export function PaymentManager() {
   const [payments, setPayments] = useState<PaymentSettings>({
     paypalEmail: '',
     mtnNumber: '',
