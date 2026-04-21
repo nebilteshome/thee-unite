@@ -146,6 +146,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
 
 export default function Gallery() {
   const [items, setItems] = useState<GalleryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [hero, setHero] = useState<HeroSettings>({
     title: 'THEE UNITE',
     subtitle: 'CRAFTING BOLD EXPRESSIONS THROUGH MODERN STREETWEAR DESIGN.',
@@ -158,30 +159,34 @@ export default function Gallery() {
 
   useEffect(() => {
     const fetchData = async () => {
-      // Fetch Hero Settings
-      const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
-      if (heroSnap.exists()) {
-        const data = heroSnap.data();
-        setHero({
-          title: data.title,
-          subtitle: data.subtitle,
-          bgUrl: data.bgUrl,
-          bgType: data.bgType
-        });
-      }
+      try {
+        // Fetch Hero Settings
+        const heroSnap = await getDoc(doc(db, 'settings', 'hero'));
+        if (heroSnap.exists()) {
+          const data = heroSnap.data();
+          setHero({
+            title: data.title,
+            subtitle: data.subtitle,
+            bgUrl: data.bgUrl,
+            bgType: data.bgType
+          });
+        }
 
-      // Fetch Gallery Items
-      const q = query(collection(db, 'gallery'), orderBy('order'));
-      const querySnapshot = await getDocs(q);
-      const galleryData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as GalleryItem));
-      
-      if (galleryData.length > 0) {
-        setItems(galleryData);
-      } else {
-        // Fallback or empty state handling
+        // Fetch Gallery Items
+        const q = query(collection(db, 'gallery'), orderBy('order'));
+        const querySnapshot = await getDocs(q);
+        const galleryData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as GalleryItem));
+        
+        if (galleryData.length > 0) {
+          setItems(galleryData);
+        }
+      } catch (error) {
+        console.error("Error fetching gallery data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -192,6 +197,8 @@ export default function Gallery() {
       videoRef.current.play().catch(err => console.log("Video autoplay blocked:", err));
     }
   }, [videoCanPlay, hero.bgType]);
+
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent uppercase tracking-widest">Synchronizing_Visuals...</div>;
 
   return (
     <div className="min-h-screen bg-black pt-32 pb-20 px-4 sm:px-8 overflow-x-hidden">
