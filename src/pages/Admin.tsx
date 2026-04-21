@@ -228,12 +228,22 @@ function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, o
 
   useEffect(() => {
     fetch('/assets.json')
-      .then(r => r.json())
-      .then(data => {
-        setAssets(data);
-        setLoading(false);
+      .then(async r => {
+        if (!r.ok) throw new Error(`HTTP_${r.status}: Failed to fetch assets.json`);
+        return r.json();
       })
-      .catch(() => setLoading(false));
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAssets(data);
+        } else {
+          throw new Error("Asset data is not a valid list");
+        }
+      })
+      .catch((err) => {
+        console.error("Asset library error:", err);
+        alert(`LIBRARY_LOAD_FAILED: ${err.message}. Ensure deployment is complete.`);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = assets.filter(a => a.toLowerCase().includes(search.toLowerCase()));
@@ -630,6 +640,9 @@ function GalleryManager() {
                 createdAt: new Date().toISOString()
               });
               fetchGallery();
+            } catch (err: any) {
+              console.error(err);
+              alert(`Gallery sync failed: ${err.message}`);
             } finally { setSaving(false); }
           }} 
           onClose={() => setShowPicker(false)} 
