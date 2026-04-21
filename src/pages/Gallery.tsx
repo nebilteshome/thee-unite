@@ -3,6 +3,16 @@ import { motion, AnimatePresence } from 'motion/react';
 import { db } from '../lib/firebase';
 import { collection, getDocs, query, orderBy, doc, getDoc } from 'firebase/firestore';
 
+// Fisher-Yates Shuffle Algorithm
+function shuffleArray<T>(array: T[]): T[] {
+  const arr = [...array];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
 interface GalleryItem {
   id: string;
   url: string;
@@ -181,7 +191,7 @@ export default function Gallery() {
         } as GalleryItem));
         
         if (galleryData.length > 0) {
-          setItems(galleryData);
+          setItems(shuffleArray(galleryData));
         }
       } catch (error) {
         console.error("Error fetching gallery data:", error);
