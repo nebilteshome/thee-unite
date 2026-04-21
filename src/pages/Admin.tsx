@@ -533,7 +533,7 @@ function SelectionBox({ start, current }: { start: { x: number, y: number }, cur
 
   return (
     <div 
-      className="fixed z-[150] border-2 border-accent bg-accent/10 pointer-events-none"
+      className="fixed z-[150] border-2 border-accent bg-accent/20 pointer-events-none shadow-[0_0_15px_rgba(var(--accent-rgb),0.3)]"
       style={{ left, top, width, height }}
     />
   );
@@ -554,6 +554,7 @@ export function GalleryManager() {
   // Drag Selection State
   const [dragStart, setDragStart] = useState<{ x: number, y: number } | null>(null);
   const [dragCurrent, setDragCurrent] = useState<{ x: number, y: number } | null>(null);
+  const mouseMoveFrame = useRef<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -574,20 +575,16 @@ export function GalleryManager() {
 
   useEffect(() => { fetchGallery(); }, []);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
-    // Only trigger on left click
-    if (e.button !== 0) return;
-    
-    // Disable on mobile
-    if (window.matchMedia('(pointer: coarse)').matches) return;
+  const getItemKey = (item: any) => item.id || item.url || item.title || item;
 
-    // If clicking an interactive element, don't start drag
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    if (window.matchMedia('(pointer: coarse)').matches) return;
     if ((e.target as HTMLElement).closest('button, input, label, a')) return;
 
-    setDragStart({ x: e.clientX, y: e.y });
-    setDragCurrent({ x: e.clientX, y: e.y });
+    setDragStart({ x: e.clientX, y: e.clientY });
+    setDragCurrent({ x: e.clientX, y: e.clientY });
 
-    // Clear selection if not holding modifier keys
     if (!e.ctrlKey && !e.shiftKey) {
       setSelectedGallery(new Set());
       setSelectedRepo(new Set());
@@ -596,44 +593,73 @@ export function GalleryManager() {
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!dragStart) return;
-    setDragCurrent({ x: e.clientX, y: e.clientY });
+    
+    const { clientX, clientY, ctrlKey, shiftKey } = e;
+    setDragCurrent({ x: clientX, y: clientY });
 
-    // Hit Detection
-    const box = {
-      left: Math.min(dragStart.x, e.clientX),
-      top: Math.min(dragStart.y, e.clientY),
-      right: Math.max(dragStart.x, e.clientX),
-      bottom: Math.max(dragStart.y, e.clientY)
-    };
+    if (mouseMoveFrame.current) cancelAnimationFrame(mouseMoveFrame.current);
 
-    const newSelection = new Set<string>();
-    itemRefs.current.forEach((el, id) => {
-      const rect = el.getBoundingClientRect();
-      const overlap = !(rect.right < box.left || 
-                        rect.left > box.right || 
-                        rect.bottom < box.top || 
-                        rect.top > box.bottom);
-      if (overlap) newSelection.add(id);
+    mouseMoveFrame.current = requestAnimationFrame(() => {
+      mouseMoveFrame.current = null;
+      
+      // 1. DIRECTION-AGNOSTIC NORMALIZATION
+      const box = {
+        left: Math.min(dragStart.x, clientX),
+        top: Math.min(dragStart.y, clientY),
+        right: Math.max(dragStart.x, clientX),
+        bottom: Math.max(dragStart.y, clientY)
+      };
+
+      const newSelection = new Set<string>();
+      const currentList = activeSubTab === 'gallery' ? items : repoAssets;
+      
+      currentList.forEach((item, idx) => {
+        const refKey = `${activeSubTab}-${idx}`;
+        const el = itemRefs.current.get(refKey);
+        
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          
+          // 2. PRECISE COLLISION DETECTION (STRICT INTERSECTION)
+          const overlap = rect.left < box.right && 
+                          rect.right > box.left && 
+                          rect.top < box.bottom && 
+                          rect.bottom > box.top;
+          
+          if (overlap) {
+            // 3. DUPLICATE HANDLING (UNIQUE KEYS)
+            const key = activeSubTab === 'gallery' 
+              ? getItemKey(item) 
+              : getItemKey({ url: `/files/${item}`, title: item });
+            
+            newSelection.add(key);
+          }
+        }
+      });
+
+      if (activeSubTab === 'gallery') {
+        setSelectedGallery(prev => {
+          const combined = ctrlKey || shiftKey ? new Set(prev) : new Set();
+          newSelection.forEach(id => combined.add(id));
+          return combined;
+        });
+      } else {
+        setSelectedRepo(prev => {
+          const combined = ctrlKey || shiftKey ? new Set(prev) : new Set();
+          newSelection.forEach(id => combined.add(id));
+          return combined;
+        });
+      }
     });
-
-    if (activeSubTab === 'gallery') {
-      setSelectedGallery(prev => {
-        const combined = e.ctrlKey || e.shiftKey ? new Set(prev) : new Set();
-        newSelection.forEach(id => combined.add(id));
-        return combined;
-      });
-    } else {
-      setSelectedRepo(prev => {
-        const combined = e.ctrlKey || e.shiftKey ? new Set(prev) : new Set();
-        newSelection.forEach(id => combined.add(id));
-        return combined;
-      });
-    }
-  }, [dragStart, activeSubTab]);
+  }, [dragStart, activeSubTab, items, repoAssets]);
 
   const handleMouseUp = useCallback(() => {
     setDragStart(null);
     setDragCurrent(null);
+    if (mouseMoveFrame.current) {
+      cancelAnimationFrame(mouseMoveFrame.current);
+      mouseMoveFrame.current = null;
+    }
   }, []);
 
   useEffect(() => {
@@ -1023,9 +1049,9 @@ export function GalleryManager() {
           items.map((item, i) => (
             <div 
               key={item.id} 
-              ref={el => el ? itemRefs.current.set(item.id, el) : itemRefs.current.delete(item.id)}
+              ref={el => el ? itemRefs.current.set(`gallery-${i}`, el) : itemRefs.current.delete(`gallery-${i}`)}
               onClick={(e) => { e.stopPropagation(); toggleGallerySelection(item.id); }}
-              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedGallery.has(item.id) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedGallery.has(getItemKey(item)) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {item.type === 'video' ? (
                 <video src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
@@ -1033,8 +1059,8 @@ export function GalleryManager() {
                 <img src={item.url} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-500" />
               )}
               
-              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedGallery.has(item.id) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
-                <Plus size={18} className={selectedGallery.has(item.id) ? 'rotate-45' : ''} />
+              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedGallery.has(getItemKey(item)) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+                <Plus size={18} className={selectedGallery.has(getItemKey(item)) ? 'rotate-45' : ''} />
               </div>
 
               <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-6" onClick={(e) => e.stopPropagation()}>
@@ -1050,12 +1076,12 @@ export function GalleryManager() {
             </div>
           ))
         ) : (
-          repoAssets.map((file) => (
+          repoAssets.map((file, i) => (
             <div 
               key={file} 
-              ref={el => el ? itemRefs.current.set(file, el) : itemRefs.current.delete(file)}
+              ref={el => el ? itemRefs.current.set(`repository-${i}`, el) : itemRefs.current.delete(`repository-${i}`)}
               onClick={(e) => { e.stopPropagation(); toggleRepoSelection(file); }}
-              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedRepo.has(file) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
+              className={`relative aspect-[4/5] bg-surface border transition-all cursor-pointer group overflow-hidden ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'border-accent ring-2 ring-accent ring-offset-4 ring-offset-black' : 'border-white/5'}`}
             >
               {isVideo(file) ? (
                 <video src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
@@ -1063,7 +1089,7 @@ export function GalleryManager() {
                 <img src={`/files/${file}`} className="w-full h-full object-cover grayscale transition-all duration-500" />
               )}
 
-              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedRepo.has(file) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
+              <div className={`absolute top-6 left-6 w-8 h-8 border-2 flex items-center justify-center transition-all ${selectedRepo.has(getItemKey({ url: `/files/${file}`, title: file })) ? 'bg-accent border-accent text-black' : 'bg-black/60 border-white/20 text-transparent'}`}>
                 <Plus size={18} />
               </div>
 
