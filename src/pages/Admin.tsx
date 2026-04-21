@@ -535,6 +535,21 @@ export function GalleryManager() {
   const [selectedGallery, setSelectedGallery] = useState<Set<string>>(new Set());
   const [selectedRepo, setSelectedRepo] = useState<Set<string>>(new Set());
 
+  // Feedback State
+  const [alert, setAlert] = useState<{ message: string, type: 'success' | 'error' } | null>(null);
+  const [modal, setModal] = useState<{ 
+    isOpen: boolean, 
+    title: string, 
+    message: string, 
+    onConfirm: () => void,
+    isDestructive?: boolean
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
+
   useEffect(() => { fetchGallery(); }, []);
 
   const fetchGallery = async () => {
@@ -546,6 +561,7 @@ export function GalleryManager() {
       await fetchRepoAssets(galleryItems);
     } catch (err: any) {
       console.error("Gallery fetch failed:", err);
+      setAlert({ message: "FAILED_TO_LOAD_GALLERY", type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -589,15 +605,16 @@ export function GalleryManager() {
       }
 
       await batch.commit();
-      fetchGallery();
+      await fetchGallery();
+      setAlert({ message: "MEDIA_UPLOADED_SUCCESSFULLY", type: 'success' });
     } catch (err) {
-      alert('Upload failed');
+      setAlert({ message: "UPLOAD_FAILED", type: 'error' });
     } finally {
       setUploading(false);
     }
-    };
+  };
 
-    const handlePublishFromRepo = async (file: string) => {
+  const handlePublishFromRepo = async (file: string) => {
     setSaving(true);
     try {
       const type = isVideo(file) ? 'video' : 'image';
@@ -609,15 +626,15 @@ export function GalleryManager() {
         createdAt: new Date().toISOString()
       });
       await fetchGallery();
-      alert('ITEM_SENT_TO_GALLERY');
+      setAlert({ message: "ITEM_PUBLISHED_TO_GALLERY", type: 'success' });
     } catch (err: any) {
-      alert(`Publish failed: ${err.message}`);
+      setAlert({ message: `PUBLISH_FAILED: ${err.message}`, type: 'error' });
     } finally {
       setSaving(false);
     }
-    };
+  };
 
-    const handleBulkPublish = async () => {
+  const handleBulkPublish = async () => {
     if (selectedRepo.size === 0) return;
     setSaving(true);
     try {
@@ -639,18 +656,16 @@ export function GalleryManager() {
       await batch.commit();
       setSelectedRepo(new Set());
       await fetchGallery();
-      alert(`SUCCESS: ${selectedArray.length} items sent to gallery page.`);
+      setAlert({ message: `SUCCESS: ${selectedArray.length} ITEMS PUBLISHED`, type: 'success' });
     } catch (err: any) {
-      alert(`Publish failed: ${err.message}`);
+      setAlert({ message: `PUBLISH_FAILED: ${err.message}`, type: 'error' });
     } finally {
       setSaving(false);
     }
-    };
-
+  };
 
   const handleBulkDelete = async () => {
     if (selectedGallery.size === 0) return;
-    if (!confirm(`ERASE ${selectedGallery.size} ITEMS FROM WEBSITE?`)) return;
     
     setSaving(true);
     try {
@@ -661,8 +676,9 @@ export function GalleryManager() {
       await batch.commit();
       setSelectedGallery(new Set());
       await fetchGallery();
+      setAlert({ message: "SELECTED_ITEMS_REMOVED", type: 'success' });
     } catch (err: any) {
-      alert(`Deletion failed: ${err.message}`);
+      setAlert({ message: `DELETION_FAILED: ${err.message}`, type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -670,7 +686,6 @@ export function GalleryManager() {
 
   const handleClearAll = async () => {
     if (items.length === 0) return;
-    if (!confirm('CRITICAL_ACTION: ERASE ALL PICTURES FROM THE GALLERY?')) return;
     
     setSaving(true);
     try {
@@ -680,21 +695,50 @@ export function GalleryManager() {
       });
       await batch.commit();
       await fetchGallery();
-      alert('GALLERY_WIPED_CLEAN');
+      setAlert({ message: "GALLERY_WIPED_CLEAN", type: 'success' });
     } catch (err: any) {
-      alert(`Wipe failed: ${err.message}`);
+      setAlert({ message: `WIPE_FAILED: ${err.message}`, type: 'error' });
     } finally {
       setSaving(false);
     }
+  };
+
+  const confirmBulkDelete = () => {
+    setModal({
+      isOpen: true,
+      title: "DELETE_SELECTED",
+      message: `ARE_YOU_SURE_YOU_WANT_TO_ERASE_${selectedGallery.size}_ITEMS_FROM_THE_WEBSITE?`,
+      isDestructive: true,
+      onConfirm: handleBulkDelete
+    });
+  };
+
+  const confirmBulkPublish = () => {
+    setModal({
+      isOpen: true,
+      title: "SEND_TO_GALLERY",
+      message: `PUBLISH_${selectedRepo.size}_SELECTED_ASSETS_TO_THE_LIVE_GALLERY_PAGE?`,
+      onConfirm: handleBulkPublish
+    });
+  };
+
+  const confirmClearAll = () => {
+    setModal({
+      isOpen: true,
+      title: "CRITICAL_WIPE",
+      message: "ARE_YOU_SURE_YOU_WANT_TO_ERASE_ALL_PICTURES_FROM_THE_GALLERY? THIS_ACTION_CANNOT_BE_UNDONE.",
+      isDestructive: true,
+      onConfirm: handleClearAll
+    });
   };
 
   const handleSyncLocal = async () => {
     setSaving(true);
     try {
       await fetchGallery();
-      alert('REPOSITORY_SYNCED: New files from GitHub identified.');
+      setAlert({ message: "REPOSITORY_SYNCED", type: 'success' });
     } catch (err: any) {
-      alert(`Refresh failed: ${err.message}`);
+      setAlert({ message: "REFRESH_FAILED", type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -729,13 +773,31 @@ export function GalleryManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('ERASE FROM WEBSITE?')) return;
-    await deleteDoc(doc(db, 'gallery', id));
-    fetchGallery();
+    setModal({
+      isOpen: true,
+      title: "ERASE_MANIFEST",
+      message: "ARE_YOU_SURE_YOU_WANT_TO_REMOVE_THIS_ITEM_FROM_THE_WEBSITE?",
+      isDestructive: true,
+      onConfirm: async () => {
+        await deleteDoc(doc(db, 'gallery', id));
+        fetchGallery();
+        setAlert({ message: "ITEM_REMOVED", type: 'success' });
+      }
+    });
   };
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+      {alert && <Alert message={alert.message} type={alert.type} onClose={() => setAlert(null)} />}
+      <ConfirmationModal 
+        isOpen={modal.isOpen}
+        onClose={() => setModal({ ...modal, isOpen: false })}
+        onConfirm={modal.onConfirm}
+        title={modal.title}
+        message={modal.message}
+        isDestructive={modal.isDestructive}
+      />
+
       {showPicker && (
         <AssetPicker 
           excludeUrls={items.map(i => i.url)}
@@ -751,9 +813,9 @@ export function GalleryManager() {
                 createdAt: new Date().toISOString()
               });
               fetchGallery();
+              setAlert({ message: "ITEM_ADDED_FROM_LIBRARY", type: 'success' });
             } catch (err: any) {
-              console.error(err);
-              alert(`Gallery sync failed: ${err.message}`);
+              setAlert({ message: "LIBRARY_SYNC_FAILED", type: 'error' });
             } finally { setSaving(false); }
           }} 
           onClose={() => setShowPicker(false)} 
@@ -785,6 +847,12 @@ export function GalleryManager() {
         </div>
 
         <div className="flex flex-wrap gap-4">
+          <button 
+            onClick={confirmClearAll}
+            className="bg-red-500/10 border border-red-500/20 text-red-500 px-8 py-4 font-black uppercase text-[10px] tracking-[0.3em] flex items-center gap-3 hover:bg-red-500 hover:text-white transition-all"
+          >
+            <Trash2 size={16} /> CLEAR_ALL
+          </button>
           <button 
             onClick={handleSyncLocal}
             className="bg-white/5 border border-white/10 text-white/60 px-8 py-4 font-black uppercase text-[10px] tracking-[0.3em] flex items-center gap-3 hover:border-accent hover:text-accent transition-all"
@@ -819,12 +887,22 @@ export function GalleryManager() {
             </span>
             <div className="flex gap-2">
               {activeSubTab === 'gallery' ? (
-                <button onClick={handleBulkDelete} className="bg-red-500 text-white px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-red-600 transition-all flex items-center gap-2">
-                  <Trash2 size={14} /> DELETE_FROM_WEBSITE
+                <button 
+                  disabled={saving}
+                  onClick={confirmBulkDelete} 
+                  className="bg-red-500 text-white px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-red-600 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} 
+                  DELETE_SELECTED
                 </button>
               ) : (
-                <button onClick={handleBulkPublish} className="bg-accent text-black px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all flex items-center gap-2">
-                  <Plus size={14} /> SENT_TO_GALLERY_PAGE
+                <button 
+                  disabled={saving}
+                  onClick={confirmBulkPublish} 
+                  className="bg-accent text-black px-8 py-3 rounded-full font-black uppercase text-[10px] tracking-widest hover:bg-white transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} 
+                  SEND_TO_GALLERY
                 </button>
               )}
               <button 
@@ -891,7 +969,7 @@ export function GalleryManager() {
                   onClick={() => handlePublishFromRepo(file)}
                   className="bg-accent text-black px-6 py-3 font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all flex items-center gap-2"
                 >
-                  <Plus size={16} /> SENT_TO_GALLERY
+                  <Plus size={16} /> SEND_TO_GALLERY
                 </button>
               </div>
               {isVideo(file) && <Video size={20} className="absolute top-6 right-6 text-accent" />}
@@ -1081,6 +1159,88 @@ export function PaymentManager() {
 }
 
 // --- UI Helpers ---
+
+function ConfirmationModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  title, 
+  message, 
+  confirmText = "CONFIRM", 
+  cancelText = "CANCEL",
+  isDestructive = false
+}: { 
+  isOpen: boolean, 
+  onClose: () => void, 
+  onConfirm: () => void, 
+  title: string, 
+  message: string,
+  confirmText?: string,
+  cancelText?: string,
+  isDestructive?: boolean
+}) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-black/90 backdrop-blur-sm" 
+          />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            className="relative w-full max-w-md bg-surface border border-white/10 p-8 rounded-2xl shadow-2xl"
+          >
+            <h3 className="text-2xl font-black italic uppercase tracking-tighter mb-4">{title}</h3>
+            <p className="text-xs font-tech text-white/40 uppercase tracking-widest leading-relaxed mb-8">{message}</p>
+            <div className="flex gap-4">
+              <button 
+                onClick={onClose}
+                className="flex-1 px-6 py-4 border border-white/10 font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all"
+              >
+                {cancelText}
+              </button>
+              <button 
+                onClick={() => { onConfirm(); onClose(); }}
+                className={`flex-1 px-6 py-4 font-black uppercase text-[10px] tracking-widest transition-all ${
+                  isDestructive ? 'bg-red-500 text-white hover:bg-red-600' : 'bg-accent text-black hover:bg-white'
+                }`}
+              >
+                {confirmText}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function Alert({ message, type, onClose }: { message: string, type: 'success' | 'error', onClose: () => void }) {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, x: 50 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 50 }}
+      className={`fixed top-8 right-8 z-[300] px-8 py-4 border font-black uppercase text-[10px] tracking-[0.2em] shadow-2xl flex items-center gap-4 ${
+        type === 'success' ? 'bg-black border-accent text-accent' : 'bg-black border-red-500 text-red-500'
+      }`}
+    >
+      <div className={`w-2 h-2 rounded-full animate-pulse ${type === 'success' ? 'bg-accent' : 'bg-red-500'}`} />
+      {message}
+    </motion.div>
+  );
+}
 
 function Input({ label, type = 'text', value, onChange, required = false }: { label: string, type?: string, value: string, onChange: (v: string) => void, required?: boolean }) {
   return (
