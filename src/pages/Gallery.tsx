@@ -268,7 +268,7 @@ export default function Gallery() {
           </motion.div>
         </header>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 auto-rows-[250px] gap-4 md:gap-6">
+        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
           {items.map((item, index) => (
             <motion.div
               key={item.id}
@@ -278,16 +278,16 @@ export default function Gallery() {
               viewport={{ once: true, margin: "-100px" }}
               transition={{ duration: 0.6, delay: (index % 5) * 0.1 }}
               onClick={() => setSelectedId(item.id)}
-              className={`relative group cursor-pointer overflow-hidden rounded-lg bg-surface border border-white/5 perspective-1000 ${item.span || 'row-span-1 col-span-1'}`}
+              className="relative group cursor-pointer overflow-hidden rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-6"
             >
               <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/20 backdrop-blur-[1px]" />
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
                 <motion.span 
                   initial={{ scale: 0.8, opacity: 0 }}
                   whileHover={{ scale: 1, opacity: 1 }}
-                  className="relative z-10 font-tech text-accent text-xs tracking-widest border border-accent/30 bg-black/40 px-4 py-2"
+                  className="relative z-10 font-tech text-accent text-[10px] tracking-[0.3em] border border-accent/30 bg-black/60 px-6 py-2 uppercase italic"
                 >
-                  VIEW_DETAIL
+                  VIEW_FULL_MANIFEST
                 </motion.span>
               </div>
 
@@ -298,34 +298,31 @@ export default function Gallery() {
                   loop
                   muted
                   playsInline
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
+                  className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                 />
               ) : (
                 <img
                   src={item.url}
                   alt={item.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000 ease-out"
+                  loading="lazy"
+                  className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                 />
               )}
 
-              <div className="absolute bottom-4 left-4 z-20 overflow-hidden">
-                <motion.p 
-                  initial={{ y: 20, opacity: 0 }}
-                  whileInView={{ y: 0, opacity: 1 }}
-                  className="font-tech text-[10px] text-white/70 tracking-widest uppercase bg-black/20 px-2 py-1 backdrop-blur-sm"
-                >
+              <div className="absolute bottom-4 left-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                <p className="font-tech text-[8px] text-accent tracking-[0.4em] uppercase bg-black/40 px-2 py-1 backdrop-blur-md border-l-2 border-accent">
                   {item.title}
-                </motion.p>
+                </p>
               </div>
             </motion.div>
           ))}
-          {items.length === 0 && (
-            <div className="col-span-4 text-center py-40 border border-white/5 bg-surface/30">
-              <p className="text-white/20 font-black tracking-[0.5em] uppercase italic">GALLERY EMPTY</p>
-              <p className="mt-4 text-[10px] font-tech text-accent/50 uppercase">Manifest media in the administrative core.</p>
-            </div>
-          )}
         </div>
+        {items.length === 0 && (
+          <div className="col-span-4 text-center py-40 border border-white/5 bg-surface/30">
+            <p className="text-white/20 font-black tracking-[0.5em] uppercase italic">GALLERY EMPTY</p>
+            <p className="mt-4 text-[10px] font-tech text-accent/50 uppercase">Manifest media in the administrative core.</p>
+          </div>
+        )}
       </div>
 
       {/* Lightbox */}
