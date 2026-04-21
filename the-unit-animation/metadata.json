@@ -1,0 +1,6 @@
+{
+  "name": "The Unit Animation",
+  "description": "An interactive animation where the word 'THE' forms chronologically using path tracing, followed by 'unit' sliding out from within the graphic, and then the entire group performs a rhythmic nodding motion.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

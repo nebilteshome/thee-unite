@@ -1,0 +1,52 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    // 1. Products Collection
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 2. Gallery Collection
+    match /gallery/{imageId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 3. Settings Collection (Hero, Payments, etc.)
+    match /settings/{settingId} {
+      // Only admins can read payment settings (contains sensitive keys)
+      // Public settings like 'hero' can be read by everyone
+      allow read: if settingId != 'payments' || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // 4. Admin Setup (Bootstrap)
+    match /admins/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow create: if isSignedIn() && request.auth.token.email == 'fffg3839@gmail.com';
+    }
+  }
+}
