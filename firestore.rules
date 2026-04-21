@@ -12,15 +12,14 @@ service cloud.firestore {
     }
     
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'fffg3839@gmail.com'
+      );
     }
 
     function isValidId(id) {
       return id is string && id.size() <= 128;
-    }
-
-    function incoming() {
-      return request.resource.data;
     }
 
     // 1. Products Collection
@@ -35,10 +34,8 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // 3. Settings Collection (Hero, Payments, etc.)
+    // 3. Settings Collection
     match /settings/{settingId} {
-      // Only admins can read payment settings (contains sensitive keys)
-      // Public settings like 'hero' can be read by everyone
       allow read: if settingId != 'payments' || isAdmin();
       allow write: if isAdmin();
     }
@@ -46,7 +43,7 @@ service cloud.firestore {
     // 4. Admin Setup (Bootstrap)
     match /admins/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && request.auth.token.email == 'fffg3839@gmail.com';
+      allow create: if isSignedIn() && (request.auth.token.email == 'fffg3839@gmail.com' || isAdmin());
     }
   }
 }
