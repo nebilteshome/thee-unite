@@ -668,6 +668,26 @@ export function GalleryManager() {
     }
   };
 
+  const handleClearAll = async () => {
+    if (items.length === 0) return;
+    if (!confirm('CRITICAL_ACTION: ERASE ALL PICTURES FROM THE GALLERY?')) return;
+    
+    setSaving(true);
+    try {
+      const batch = writeBatch(db);
+      items.forEach(item => {
+        batch.delete(doc(db, 'gallery', item.id));
+      });
+      await batch.commit();
+      await fetchGallery();
+      alert('GALLERY_WIPED_CLEAN');
+    } catch (err: any) {
+      alert(`Wipe failed: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSyncLocal = async () => {
     setSaving(true);
     try {
