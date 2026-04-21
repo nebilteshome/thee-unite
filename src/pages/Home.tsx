@@ -4,6 +4,10 @@ import { Link } from 'react-router-dom';
 import Collection from './Collection';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+
+gsap.registerPlugin(ScrollTrigger);
 
 interface HeroSettings {
   title: string;
@@ -45,8 +49,6 @@ const CharacterReveal = ({ text, className, delay = 0 }: { text: string, classNa
 };
 
 const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () => void }) => {
-  // If the title is "THEE UNITE", use the special SVG animation
-  // Otherwise, use a standard text animation
   const isDefaultTitle = title.toUpperCase() === 'THEE UNITE';
 
   if (isDefaultTitle) {
@@ -148,6 +150,9 @@ export default function Home() {
   });
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchHero = async () => {
@@ -163,11 +168,45 @@ export default function Home() {
     }
   }, [videoCanPlay, hero.bgType]);
 
+  useEffect(() => {
+    if (!heroRef.current || !overlayRef.current) return;
+
+    let ctx = gsap.context(() => {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: heroRef.current,
+          start: 'top top',
+          end: '+=100%', // Pin for 100% of viewport height
+          pin: true,
+          scrub: 1,
+          anticipatePin: 1,
+        }
+      });
+
+      tl.to(overlayRef.current, {
+        y: -150,
+        opacity: 0,
+        scale: 0.95,
+        filter: 'blur(10px)',
+        duration: 1,
+        ease: 'power2.inOut'
+      })
+      .to(videoContainerRef.current, {
+        scale: 1.05,
+        opacity: 0.4,
+        duration: 1,
+      }, 0); // Concurrent animation
+
+    });
+
+    return () => ctx.revert();
+  }, [videoCanPlay]); // Re-run when video is ready to ensure correct pinning heights
+
   return (
-    <>
-      <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black">
-        {/* Background - Smooth Fade In */}
-        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+    <div className="bg-black">
+      <section ref={heroRef} className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
+        {/* Background Video/Image Container */}
+        <div ref={videoContainerRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           {hero.bgType === 'video' ? (
             <video
               ref={videoRef}
@@ -189,7 +228,8 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/10 z-10" />
         </div>
 
-        <div className="relative z-20 text-center px-6 w-full max-w-screen-2xl mx-auto">
+        {/* Content Overlay */}
+        <div ref={overlayRef} className="relative z-20 text-center px-6 w-full max-w-screen-2xl mx-auto">
           <div className="flex flex-col items-center justify-center">
             <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
             
@@ -222,22 +262,17 @@ export default function Home() {
             transition={{ delay: 1.5, duration: 1 }}
             className="absolute bottom-[-100px] left-1/2 -translate-x-1/2"
           >
-            <Link to="/collection">
-              <motion.div
-                whileHover={{ y: -5 }}
-                className="group flex flex-col items-center gap-4 cursor-pointer"
-              >
-                <span className="font-tech text-[10px] tracking-[0.4em] text-white/30 uppercase group-hover:text-accent transition-colors">Enter Domain</span>
-                <div className="w-px h-16 bg-gradient-to-b from-accent to-transparent" />
-              </motion.div>
-            </Link>
+            <div className="group flex flex-col items-center gap-4">
+              <span className="font-tech text-[10px] tracking-[0.4em] text-white/30 uppercase group-hover:text-accent transition-colors">Scroll to explore</span>
+              <div className="w-px h-16 bg-gradient-to-b from-accent to-transparent" />
+            </div>
           </motion.div>
         </div>
       </section>
       
-      <div id="collection-section">
+      <div className="relative z-30 bg-black">
         <Collection />
       </div>
-    </>
+    </div>
   );
 }
