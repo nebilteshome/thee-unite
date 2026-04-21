@@ -3,12 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Plus, Trash2, Save, Image as ImageIcon, ChevronRight, Lock, 
   Settings, ShoppingBag, Layout as LayoutIcon, CreditCard, 
-  LogOut, Upload, X, Edit2, Loader2, Video
+  LogOut, Upload, X, Edit2, Loader2, Video, Database, Search
 } from 'lucide-react';
 import { db, auth, uploadFile } from '../lib/firebase';
 import { 
   collection, addDoc, getDocs, deleteDoc, doc, 
-  updateDoc, query, orderBy, getDoc, setDoc 
+  updateDoc, query, orderBy, getDoc, setDoc, writeBatch
 } from 'firebase/firestore';
 import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
@@ -21,6 +21,7 @@ interface Product {
   description: string;
   category: string;
   images: string[];
+  image?: string;
   sizes: string[];
   colors: string[];
   createdAt: string;
@@ -110,7 +111,7 @@ export default function Admin() {
       {/* Sidebar */}
       <aside className="w-full md:w-64 border-r border-white/10 p-6 flex flex-col gap-8 shrink-0">
         <div>
-          <span className="font-tech text-[10px] tracking-[0.4em] text-accent uppercase mb-2 block">ADMIN_PANEL_v2.0</span>
+          <span className="font-tech text-[10px] tracking-[0.4em] text-accent uppercase mb-2 block">ADMIN_PANEL_v2.1</span>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">MANIFESTOR</h1>
         </div>
 
@@ -150,7 +151,7 @@ export default function Admin() {
   );
 }
 
-// --- Sub-Components ---
+// --- Global UI Helpers ---
 
 function TabButton({ active, onClick, icon, label }: { active: boolean, onClick: () => void, icon: React.ReactNode, label: string }) {
   return (
@@ -188,6 +189,84 @@ function LoginView({ user, adminStatus, onLogin }: any) {
   );
 }
 
+function AssetPicker({ onSelect, onClose }: { onSelect: (url: string) => void, onClose: () => void }) {
+  const [assets, setAssets] = useState<string[]>([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch('/assets.json')
+      .then(r => r.json())
+      .then(data => {
+        setAssets(data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  const filtered = assets.filter(a => a.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
+      <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+      <div className="relative w-full max-w-5xl bg-surface border border-white/10 rounded-2xl flex flex-col max-h-[80vh] overflow-hidden">
+        <header className="p-6 border-b border-white/5 flex justify-between items-center shrink-0">
+          <div>
+            <h3 className="text-xl font-black italic uppercase tracking-tight">ASSET_LIBRARY</h3>
+            <p className="text-[10px] font-tech text-white/40 uppercase">Select existing file from domain repository</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:text-accent"><X size={20} /></button>
+        </header>
+
+        <div className="p-6 border-b border-white/5 shrink-0">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+            <input 
+              autoFocus
+              placeholder="SEARCH_MANIFEST_DATA..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full bg-black border border-white/10 p-4 pl-12 font-tech text-xs uppercase text-accent outline-none"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {loading ? (
+            <div className="h-full flex items-center justify-center font-tech text-xs text-accent">SCANNING_REPOSITORY...</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {filtered.map(asset => {
+                const url = `/files/${asset}`;
+                const isVideo = asset.endsWith('.mp4');
+                return (
+                  <button 
+                    key={asset}
+                    onClick={() => onSelect(url)}
+                    className="group relative aspect-square bg-black border border-white/5 overflow-hidden hover:border-accent transition-all"
+                  >
+                    {isVideo ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                        <Video size={24} className="text-white/20 group-hover:text-accent" />
+                        <span className="text-[8px] font-tech text-white/40 uppercase truncate px-2 w-full">{asset}</span>
+                      </div>
+                    ) : (
+                      <img src={url} className="w-full h-full object-cover grayscale group-hover:grayscale-0" />
+                    )}
+                    <div className="absolute inset-0 bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="text-[8px] font-black text-black bg-accent px-2 py-1">SELECT</span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // --- Managers ---
 
 function ProductManager() {
@@ -195,6 +274,7 @@ function ProductManager() {
   const [isEditing, setIsEditing] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -266,7 +346,7 @@ function ProductManager() {
       description: p.description || '',
       sizes: p.sizes.join(', '),
       colors: p.colors.join(', '),
-      images: p.images || [p.image] // handle old image field
+      images: p.images || [p.image || '']
     });
   };
 
@@ -283,6 +363,8 @@ function ProductManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+      {showPicker && <AssetPicker onSelect={(url) => { setFormData(p => ({ ...p, images: [...p.images, url] })); setShowPicker(false); }} onClose={() => setShowPicker(false)} />}
+      
       <header className="flex justify-between items-end mb-12">
         <h2 className="text-4xl font-black italic uppercase tracking-tighter">PRODUCT_CORE</h2>
         <p className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{products.length} OBJECTS_MANIFESTED</p>
@@ -345,6 +427,14 @@ function ProductManager() {
                     </button>
                   </div>
                 ))}
+                <button 
+                  type="button"
+                  onClick={() => setShowPicker(true)}
+                  className="aspect-square border border-dashed border-accent/30 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"
+                >
+                  <Database size={20} className="text-accent/40 mb-2" />
+                  <span className="text-[8px] font-tech text-accent/60 uppercase text-center px-2">Library</span>
+                </button>
                 <label className="aspect-square border border-dashed border-white/20 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all">
                   <Upload size={20} className="text-white/20 mb-2" />
                   <span className="text-[8px] font-tech text-white/40 uppercase">Upload</span>
@@ -399,6 +489,7 @@ function GalleryManager() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => { fetchGallery(); }, []);
 
@@ -432,6 +523,36 @@ function GalleryManager() {
     }
   };
 
+  const handleSyncLocal = async () => {
+    if (!confirm('Sync all files from GitHub "public/files" to Gallery?')) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/assets.json');
+      const files: string[] = await res.json();
+      const batch = writeBatch(db);
+      
+      files.forEach((file, i) => {
+        const type = file.endsWith('.mp4') ? 'video' : 'image';
+        const docRef = doc(collection(db, 'gallery'));
+        batch.set(docRef, {
+          url: `/files/${file}`,
+          type,
+          title: file.split('.')[0].toUpperCase(),
+          order: items.length + i,
+          createdAt: new Date().toISOString()
+        });
+      });
+      
+      await batch.commit();
+      fetchGallery();
+      alert('SYNCHRONIZATION_COMPLETE');
+    } catch (err) {
+      alert('Sync failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleMove = async (index: number, direction: 'up' | 'down') => {
     const newItems = [...items];
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -439,7 +560,6 @@ function GalleryManager() {
 
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
     
-    // Update orders in Firestore
     setSaving(true);
     try {
       await Promise.all(newItems.map((item, i) => updateDoc(doc(db, 'gallery', item.id), { order: i })));
@@ -457,10 +577,45 @@ function GalleryManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-      <header className="flex justify-between items-end mb-12">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter">GALLERY_CORE</h2>
-        <div className="flex gap-4">
+      {showPicker && (
+        <AssetPicker 
+          onSelect={async (url) => {
+            setShowPicker(false);
+            setSaving(true);
+            try {
+              await addDoc(collection(db, 'gallery'), {
+                url,
+                type: url.endsWith('.mp4') ? 'video' : 'image',
+                title: url.split('/').pop()?.split('.')[0].toUpperCase(),
+                order: items.length,
+                createdAt: new Date().toISOString()
+              });
+              fetchGallery();
+            } finally { setSaving(false); }
+          }} 
+          onClose={() => setShowPicker(false)} 
+        />
+      )}
+
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-12">
+        <div>
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter">GALLERY_CORE</h2>
+          <p className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em] mt-2">Manifesting visuals from domain storage</p>
+        </div>
+        <div className="flex flex-wrap gap-4">
           {saving && <Loader2 size={16} className="animate-spin text-accent" />}
+          <button 
+            onClick={handleSyncLocal}
+            className="bg-white/5 border border-white/10 text-white/40 px-6 py-3 font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:border-accent hover:text-accent transition-all"
+          >
+            <Database size={16} /> SYNC_LOCAL_FILES
+          </button>
+          <button 
+            onClick={() => setShowPicker(true)}
+            className="bg-accent/10 border border-accent/20 text-accent px-6 py-3 font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:bg-accent hover:text-black transition-all"
+          >
+            <Database size={16} /> LIBRARY
+          </button>
           <label className="bg-accent text-black px-8 py-3 font-black uppercase text-xs tracking-widest cursor-pointer flex items-center gap-2 hover:bg-white transition-all">
             {uploading ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
             ADD_MEDIA
@@ -503,6 +658,7 @@ function HeroManager() {
     bgType: 'video'
   });
   const [saving, setSaving] = useState(false);
+  const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     const fetchHero = async () => {
@@ -539,6 +695,16 @@ function HeroManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+      {showPicker && (
+        <AssetPicker 
+          onSelect={(url) => { 
+            setHero(h => ({ ...h, bgUrl: url, bgType: url.endsWith('.mp4') ? 'video' : 'image' })); 
+            setShowPicker(false); 
+          }} 
+          onClose={() => setShowPicker(false)} 
+        />
+      )}
+
       <header className="mb-12">
         <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_SYNC</h2>
       </header>
@@ -550,11 +716,19 @@ function HeroManager() {
           ) : (
             <img src={hero.bgUrl} className="w-full h-full object-cover opacity-50" />
           )}
-          <label className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity cursor-pointer">
-            <Upload size={32} className="text-accent mb-4" />
-            <span className="font-tech text-xs tracking-widest uppercase">CHANGE_BACKGROUND</span>
-            <input type="file" className="hidden" onChange={handleUpload} />
-          </label>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 opacity-0 hover:opacity-100 transition-opacity">
+            <div className="flex gap-4">
+              <button onClick={() => setShowPicker(true)} className="flex flex-col items-center justify-center p-6 bg-accent text-black hover:bg-white transition-all">
+                <Database size={32} className="mb-2" />
+                <span className="font-tech text-[10px] tracking-widest uppercase">LIBRARY</span>
+              </button>
+              <label className="flex flex-col items-center justify-center p-6 bg-white/10 hover:bg-white/20 transition-all cursor-pointer">
+                <Upload size={32} className="text-white mb-2" />
+                <span className="font-tech text-[10px] tracking-widest uppercase">UPLOAD</span>
+                <input type="file" className="hidden" onChange={handleUpload} />
+              </label>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-6">
