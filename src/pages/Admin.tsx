@@ -577,6 +577,28 @@ export function GalleryManager() {
 
   const getItemKey = (item: any) => item.id || item.url || item.title || item;
 
+  const buildPublishedGalleryItem = (file: string, currentOrder: number) => {
+    const url = `/files/${file}`;
+    const type = isVideo(file) ? 'video' : 'image';
+    const title = file.split('.')[0].toUpperCase();
+    
+    const data = {
+      url,
+      type,
+      title,
+      order: currentOrder,
+      createdAt: new Date().toISOString(),
+      published: true
+    };
+
+    // VERIFICATION
+    if (!data.url || !data.type || !data.title) {
+      throw new Error(`INVALID_DATA_SHAPE: Missing required fields for ${file}`);
+    }
+
+    return data;
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     if (window.matchMedia('(pointer: coarse)').matches) return;
@@ -597,14 +619,24 @@ export function GalleryManager() {
     const { clientX, clientY, ctrlKey, shiftKey } = e;
     setDragCurrent({ x: clientX, y: clientY });
 
-    // --- AUTO-SCROLL LOGIC ---
-    const edgeThreshold = 100;
+    // --- AUTO-SCROLL LOGIC (VERTICAL + HORIZONTAL) ---
+    const edgeThreshold = 120;
     const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+    const scrollStep = 20;
     
+    // Vertical
     if (clientY < edgeThreshold) {
-      window.scrollBy({ top: -15, behavior: 'auto' });
+      window.scrollBy({ top: -scrollStep, behavior: 'auto' });
     } else if (clientY > viewportHeight - edgeThreshold) {
-      window.scrollBy({ top: 15, behavior: 'auto' });
+      window.scrollBy({ top: scrollStep, behavior: 'auto' });
+    }
+
+    // Horizontal
+    if (clientX < edgeThreshold) {
+      window.scrollBy({ left: -scrollStep, behavior: 'auto' });
+    } else if (clientX > viewportWidth - edgeThreshold) {
+      window.scrollBy({ left: scrollStep, behavior: 'auto' });
     }
 
     if (mouseMoveFrame.current) cancelAnimationFrame(mouseMoveFrame.current);
@@ -748,14 +780,8 @@ export function GalleryManager() {
   const handlePublishFromRepo = async (file: string) => {
     setSaving(true);
     try {
-      const type = isVideo(file) ? 'video' : 'image';
-      await addDoc(collection(db, 'gallery'), {
-        url: `/files/${file}`,
-        type,
-        title: file.split('.')[0].toUpperCase(),
-        order: items.length,
-        createdAt: new Date().toISOString()
-      });
+      const data = buildPublishedGalleryItem(file, items.length);
+      await addDoc(collection(db, 'gallery'), data);
       await fetchGallery();
       setAlert({ message: "ITEM_PUBLISHED_TO_GALLERY", type: 'success' });
     } catch (err: any) {
@@ -773,15 +799,9 @@ export function GalleryManager() {
       const selectedArray = Array.from(selectedRepo) as string[];
 
       selectedArray.forEach((file, i) => {
-        const type = isVideo(file) ? 'video' : 'image';
+        const data = buildPublishedGalleryItem(file, items.length + i);
         const docRef = doc(collection(db, 'gallery'));
-        batch.set(docRef, {
-          url: `/files/${file}`,
-          type,
-          title: file.split('.')[0].toUpperCase(),
-          order: items.length + i,
-          createdAt: new Date().toISOString()
-        });
+        batch.set(docRef, data);
       });
 
       await batch.commit();

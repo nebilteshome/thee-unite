@@ -269,53 +269,64 @@ export default function Gallery() {
         </header>
 
         <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
-          {items.map((item, index) => (
-            <motion.div
-              key={item.id}
-              layoutId={`media-${item.id}`}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 0.6, delay: (index % 5) * 0.1 }}
-              onClick={() => setSelectedId(item.id)}
-              className="relative group cursor-pointer overflow-hidden rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-6"
-            >
-              <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
-                <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
-                <motion.span 
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  whileHover={{ scale: 1, opacity: 1 }}
-                  className="relative z-10 font-tech text-accent text-[10px] tracking-[0.3em] border border-accent/30 bg-black/60 px-6 py-2 uppercase italic"
-                >
-                  VIEW_FULL_MANIFEST
-                </motion.span>
-              </div>
+          {items.map((item, index) => {
+            const mediaUrl = item.url;
+            if (!mediaUrl) return null;
 
-              {item.type === 'video' ? (
-                <video
-                  src={item.url}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
-                />
-              ) : (
-                <img
-                  src={item.url}
-                  alt={item.title}
-                  loading="lazy"
-                  className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
-                />
-              )}
+            return (
+              <motion.div
+                key={item.id}
+                layoutId={`media-${item.id}`}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-100px" }}
+                transition={{ duration: 0.6, delay: (index % 5) * 0.1 }}
+                onClick={() => setSelectedId(item.id)}
+                className="relative group cursor-pointer overflow-hidden rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-6 shadow-2xl"
+              >
+                <div className="absolute inset-0 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+                  <motion.span 
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    whileHover={{ scale: 1, opacity: 1 }}
+                    className="relative z-10 font-tech text-accent text-[10px] tracking-[0.3em] border border-accent/30 bg-black/60 px-6 py-2 uppercase italic"
+                  >
+                    VIEW_FULL_MANIFEST
+                  </motion.span>
+                </div>
 
-              <div className="absolute bottom-4 left-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                <p className="font-tech text-[8px] text-accent tracking-[0.4em] uppercase bg-black/40 px-2 py-1 backdrop-blur-md border-l-2 border-accent">
-                  {item.title}
-                </p>
-              </div>
-            </motion.div>
-          ))}
+                {item.type === 'video' ? (
+                  <video
+                    src={mediaUrl}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
+                    onError={(e) => {
+                      (e.target as HTMLVideoElement).style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={mediaUrl}
+                    alt={item.title || 'Manifest Data'}
+                    loading="lazy"
+                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = 'https://placehold.co/600x800/black/accent?text=MANIFEST_DATA_UNAVAILABLE';
+                    }}
+                  />
+                )}
+
+                <div className="absolute bottom-4 left-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <p className="font-tech text-[8px] text-accent tracking-[0.4em] uppercase bg-black/40 px-2 py-1 backdrop-blur-md border-l-2 border-accent">
+                    {item.title || 'UNNAMED_OBJECT'}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
         {items.length === 0 && (
           <div className="col-span-4 text-center py-40 border border-white/5 bg-surface/30">
