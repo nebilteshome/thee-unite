@@ -69,6 +69,10 @@ interface Order {
   customer: {
     email: string;
     name: string;
+    phone?: string;
+    address?: string;
+    city?: string;
+    country?: string;
   };
   status: string;
   payment: {
@@ -418,6 +422,7 @@ export function OrderManager() {
                 <tr className="border-b border-white/10 font-tech text-[9px] text-white/30 uppercase tracking-[0.3em]">
                   <th className="pb-4 pl-4">Manifest_ID</th>
                   <th className="pb-4">Customer</th>
+                  <th className="pb-4">Location</th>
                   <th className="pb-4">Items</th>
                   <th className="pb-4">Total</th>
                   <th className="pb-4">Status</th>
@@ -433,7 +438,12 @@ export function OrderManager() {
                     </td>
                     <td className="py-6">
                       {order.customer.name}<br/>
-                      <span className="font-tech text-[9px] text-white/30 lowercase italic">{order.customer.email}</span>
+                      <span className="font-tech text-[9px] text-white/30 lowercase italic">{order.customer.email}</span><br/>
+                      <span className="font-tech text-[9px] text-accent/60 italic">{order.customer.phone}</span>
+                    </td>
+                    <td className="py-6 max-w-[200px]">
+                      <div className="truncate text-white/60 text-[10px]">{order.customer.address}</div>
+                      <div className="font-tech text-[9px] text-white/30">{order.customer.city}, {order.customer.country}</div>
                     </td>
                     <td className="py-6">
                       {order.items.length} units

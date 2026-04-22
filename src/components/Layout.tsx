@@ -14,10 +14,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const location = useLocation();
 
+  const [isCheckoutMode, setIsCheckoutMode] = useState(false);
+  const [shippingDetails, setShippingDetails] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    country: 'Ghana'
+  });
+
   useEffect(() => {
     const unsubscribe = cartStore.subscribe(() => {
       setCartItems([...cartStore.items]);
       setIsCartOpen(cartStore.isOpen);
+      if (!cartStore.isOpen) setIsCheckoutMode(false);
     });
     return unsubscribe;
   }, []);
@@ -32,9 +43,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     currency: 'USD',
     payment_options: 'card,mobilemoneyghana,mobilemoneyuganda,mobilemoneyrwanda,mobilemoneyzambia,mobilemoneytanzania,paypal',
     customer: {
-      email: auth.currentUser?.email || 'customer@example.com',
-      phone_number: '',
-      name: auth.currentUser?.displayName || 'Guest Customer',
+      email: shippingDetails.email || auth.currentUser?.email || 'customer@example.com',
+      phone_number: shippingDetails.phone || '',
+      name: shippingDetails.fullName || auth.currentUser?.displayName || 'Guest Customer',
     },
     customizations: {
       title: 'THEE UNITE',
@@ -45,78 +56,76 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const handleFlutterPayment = useFlutterwave(config);
 
-  const handleCheckout = () => {
+  const handleCheckout = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (cartItems.length === 0) return;
     
+    // Validate shipping if in checkout mode
+    if (isCheckoutMode) {
+      if (!shippingDetails.fullName || !shippingDetails.email || !shippingDetails.address) {
+        alert("Please fulfill all manifestation requirements (Shipping Details).");
+        return;
+      }
+    } else {
+      setIsCheckoutMode(true);
+      return;
+    }
+
     setIsProcessing(true);
     
-    handleFlutterPayment({
-      callback: async (response) => {
-        console.log("Flutterwave Response:", response);
-        
-        if (response.status === "successful" || response.status === "completed") {
-          try {
-            // Write order to Firestore using a transaction to ensure stock update
-            await runTransaction(db, async (transaction) => {
-              // Create the order doc
-              const orderData = {
-                items: cartItems.map(item => ({
-                  id: item.id,
-                  productId: item.id.split('-')[0], // Extract real product ID
-                  name: item.name,
-                  price: item.price,
-                  quantity: item.quantity,
-                  size: item.size,
-                  color: item.color
-                })),
-                total: subtotal,
-                customer: config.customer,
-                payment: {
-                  reference: response.tx_ref,
-                  transaction_id: response.transaction_id,
-                  status: response.status
-                },
-                status: 'paid',
-                createdAt: serverTimestamp()
-              };
+    // DEMO MODE: Directly create order without real payment
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderData = {
+          items: cartItems.map(item => ({
+            id: item.id,
+            productId: item.id.split('-')[0],
+            name: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            size: item.size,
+            color: item.color
+          })),
+          total: subtotal,
+          customer: {
+            ...config.customer,
+            ...shippingDetails
+          },
+          payment: {
+            reference: config.tx_ref,
+            status: 'demo_success',
+            method: 'demo'
+          },
+          status: 'paid',
+          createdAt: serverTimestamp()
+        };
 
-              // Add the order
-              const orderRef = doc(collection(db, 'orders'));
-              transaction.set(orderRef, orderData);
+        const orderRef = doc(collection(db, 'orders'));
+        transaction.set(orderRef, orderData);
 
-              // Decrement stock for each item
-              for (const item of cartItems) {
-                const productId = item.id.split('-')[0];
-                const productRef = doc(db, 'products', productId);
-                const productSnap = await transaction.get(productRef);
-                
-                if (productSnap.exists()) {
-                  const currentStock = productSnap.data().stock ?? 0;
-                  transaction.update(productRef, {
-                    stock: Math.max(0, currentStock - item.quantity)
-                  });
-                }
-              }
+        for (const item of cartItems) {
+          const productId = item.id.split('-')[0];
+          const productRef = doc(db, 'products', productId);
+          const productSnap = await transaction.get(productRef);
+          if (productSnap.exists()) {
+            const currentStock = productSnap.data().stock ?? 0;
+            transaction.update(productRef, {
+              stock: Math.max(0, currentStock - item.quantity)
             });
-            
-            cartStore.clearCart();
-            cartStore.setIsOpen(false);
-            alert('ORDER_MANIFESTED: Payment Successful');
-          } catch (error: any) {
-            console.error("Order creation failed:", error);
-            alert(`ORDER_FAILED: ${error.message}`);
           }
-        } else {
-          alert('PAYMENT_INCOMPLETE: Please try again.');
         }
-        
-        closePaymentModal();
-        setIsProcessing(false);
-      },
-      onClose: () => {
-        setIsProcessing(false);
-      },
-    });
+      });
+      
+      cartStore.clearCart();
+      setIsCheckoutMode(false);
+      cartStore.setIsOpen(false);
+      alert('ORDER_MANIFESTED: Manifest sent to administrative core.');
+    } catch (error: any) {
+      console.error("Order creation failed:", error);
+      alert(`ORDER_FAILED: ${error.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const mainLinks = [
@@ -191,78 +200,161 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full max-w-md bg-neutral-900 z-[101] flex flex-col border-l border-white/10"
+              className="fixed top-0 right-0 h-full w-full max-w-md bg-neutral-900 z-[101] flex flex-col border-l border-white/10 shadow-2xl"
             >
-              <div className="p-8 border-b border-white/10 flex items-center justify-between">
+              <div className="p-8 border-b border-white/10 flex items-center justify-between bg-black/50 backdrop-blur-md sticky top-0 z-10">
                 <div>
-                  <h3 className="text-sm font-tech tracking-[0.3em] uppercase text-accent mb-1 underline underline-offset-4 decoration-accent/30">Your Frequency</h3>
-                  <p className="text-2xl font-black italic uppercase tracking-tighter">Shopping Bag</p>
+                  <h3 className="font-tech text-[10px] tracking-[0.3em] uppercase text-accent mb-1 underline underline-offset-4 decoration-accent/30">
+                    {isCheckoutMode ? 'Fulfillment_Data' : 'Your Frequency'}
+                  </h3>
+                  <p className="text-2xl font-black italic uppercase tracking-tighter">
+                    {isCheckoutMode ? 'Shipping_Info' : 'Shopping Bag'}
+                  </p>
                 </div>
-                <button 
-                  onClick={() => cartStore.setIsOpen(false)}
-                  className="p-2 hover:bg-white/10 rounded-full transition-colors"
-                >
-                  <X size={24} />
-                </button>
+                <div className="flex items-center gap-2">
+                  {isCheckoutMode && (
+                    <button 
+                      onClick={() => setIsCheckoutMode(false)}
+                      className="p-2 hover:bg-white/10 rounded-full transition-colors text-accent"
+                      title="Return to Bag"
+                    >
+                      <ArrowUpRight size={24} className="rotate-[225deg]" />
+                    </button>
+                  )}
+                  <button 
+                    onClick={() => cartStore.setIsOpen(false)}
+                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 overflow-y-auto p-8 space-y-8">
-                {cartItems.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                    <ShoppingBag size={64} strokeWidth={1} />
-                    <p className="font-tech text-xs tracking-widest uppercase italic">Your bag is currently void</p>
-                    <Link 
-                      to="/collection" 
-                      onClick={() => cartStore.setIsOpen(false)}
-                      className="text-accent underline underline-offset-8 decoration-accent/30 font-black text-xs tracking-widest"
-                    >
-                      ENTER THE DOMAIN
-                    </Link>
-                  </div>
-                ) : (
-                  cartItems.map((item) => (
-                    <div key={item.id} className="flex gap-6 group">
-                      <div className="w-24 aspect-[3/4] bg-surface flex-shrink-0 overflow-hidden border border-white/5 relative">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover grayscale transition-all group-hover:grayscale-0" />
+                {isCheckoutMode ? (
+                  <form className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-2">
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Full_Name</label>
+                      <input 
+                        type="text" 
+                        value={shippingDetails.fullName}
+                        onChange={e => setShippingDetails({...shippingDetails, fullName: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        placeholder="ENTER_NAME..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Email_Address</label>
+                      <input 
+                        type="email" 
+                        value={shippingDetails.email}
+                        onChange={e => setShippingDetails({...shippingDetails, email: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        placeholder="ENTER_EMAIL..."
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Contact_Phone</label>
+                      <input 
+                        type="tel" 
+                        value={shippingDetails.phone}
+                        onChange={e => setShippingDetails({...shippingDetails, phone: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        placeholder="+000 000 000"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Manifestation_Address</label>
+                      <textarea 
+                        value={shippingDetails.address}
+                        onChange={e => setShippingDetails({...shippingDetails, address: e.target.value})}
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors min-h-[100px]"
+                        placeholder="STREET, HOUSE, ETC..."
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">City</label>
+                        <input 
+                          type="text" 
+                          value={shippingDetails.city}
+                          onChange={e => setShippingDetails({...shippingDetails, city: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                          placeholder="CITY..."
+                        />
                       </div>
-                      <div className="flex-1 flex flex-col justify-between py-1">
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <h4 className="font-black uppercase tracking-tighter text-lg">{item.name}</h4>
-                            <span className="font-tech text-xs text-accent">${item.price}</span>
-                          </div>
-                          <div className="flex gap-4 text-[10px] items-center text-white/40 font-tech uppercase tracking-widest">
-                            <span>Size: {item.size}</span>
-                            <span className="w-1 h-1 bg-white/20 rounded-full" />
-                            <span>Color: {item.color}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 bg-black/50 p-1 border border-white/10">
-                            <button 
-                              onClick={() => cartStore.updateQuantity(item.id, -1)}
-                              className="p-1 hover:text-accent transition-colors"
-                            >
-                              <Minus size={14} />
-                            </button>
-                            <span className="font-tech text-xs w-4 text-center">{item.quantity}</span>
-                            <button 
-                              onClick={() => cartStore.updateQuantity(item.id, 1)}
-                              className="p-1 hover:text-accent transition-colors"
-                            >
-                              <Plus size={14} />
-                            </button>
-                          </div>
-                          <button 
-                            onClick={() => cartStore.removeItem(item.id)}
-                            className="text-white/20 hover:text-red-500 transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
+                      <div className="space-y-2">
+                        <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Country</label>
+                        <select 
+                          value={shippingDetails.country}
+                          onChange={e => setShippingDetails({...shippingDetails, country: e.target.value})}
+                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors appearance-none"
+                        >
+                          <option value="Ghana">Ghana</option>
+                          <option value="Nigeria">Nigeria</option>
+                          <option value="World">Greater Domain</option>
+                        </select>
                       </div>
                     </div>
-                  ))
+                  </form>
+                ) : (
+                  cartItems.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
+                      <ShoppingBag size={64} strokeWidth={1} />
+                      <p className="font-tech text-xs tracking-widest uppercase italic">Your bag is currently void</p>
+                      <Link 
+                        to="/collection" 
+                        onClick={() => cartStore.setIsOpen(false)}
+                        className="text-accent underline underline-offset-8 decoration-accent/30 font-black text-xs tracking-widest"
+                      >
+                        ENTER THE DOMAIN
+                      </Link>
+                    </div>
+                  ) : (
+                    cartItems.map((item) => (
+                      <div key={item.id} className="flex gap-6 group animate-in fade-in slide-in-from-left-4 duration-500">
+                        <div className="w-24 aspect-[3/4] bg-surface flex-shrink-0 overflow-hidden border border-white/5 relative">
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover grayscale transition-all group-hover:grayscale-0" />
+                        </div>
+                        <div className="flex-1 flex flex-col justify-between py-1">
+                          <div>
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-black uppercase tracking-tighter text-lg">{item.name}</h4>
+                              <span className="font-tech text-xs text-accent">${item.price}</span>
+                            </div>
+                            <div className="flex gap-4 text-[10px] items-center text-white/40 font-tech uppercase tracking-widest">
+                              <span>Size: {item.size}</span>
+                              <span className="w-1 h-1 bg-white/20 rounded-full" />
+                              <span>Color: {item.color}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 bg-black/50 p-1 border border-white/10">
+                              <button 
+                                onClick={() => cartStore.updateQuantity(item.id, -1)}
+                                className="p-1 hover:text-accent transition-colors"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span className="font-tech text-xs w-4 text-center">{item.quantity}</span>
+                              <button 
+                                onClick={() => cartStore.updateQuantity(item.id, 1)}
+                                className="p-1 hover:text-accent transition-colors"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+                            <button 
+                              onClick={() => cartStore.removeItem(item.id)}
+                              className="text-white/20 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )
                 )}
               </div>
 
@@ -275,22 +367,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     <span className="text-3xl font-black italic tracking-tighter">${subtotal}</span>
                   </div>
                   <button 
-                    onClick={handleCheckout}
+                    onClick={() => handleCheckout()}
                     disabled={isProcessing}
                     className="w-full bg-accent text-black py-6 font-black uppercase text-sm tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-white transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isProcessing ? (
                       <>
-                        Processing <Loader2 className="animate-spin" size={18} />
+                        Synchronizing <Loader2 className="animate-spin" size={18} />
                       </>
                     ) : (
-                      <>
-                        CHECKOUT_DOMAIN <ArrowUpRight size={18} />
-                      </>
+                      isCheckoutMode ? (
+                        <>FINALIZE_MANIFEST <ArrowUpRight size={18} /></>
+                      ) : (
+                        <>INITIATE_FULFILLMENT <ArrowUpRight size={18} /></>
+                      )
                     )}
                   </button>
                   <p className="text-[9px] text-center text-white/20 font-tech uppercase tracking-widest">
-                    Taxes and shipping calculated at final manifest.
+                    {isCheckoutMode ? 'Confirming manifest will finalize the order.' : 'Taxes and shipping calculated at final manifest.'}
                   </p>
                 </div>
               )}
