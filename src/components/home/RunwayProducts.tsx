@@ -1,23 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { products, Product } from '../../data/products';
+import { fetchProducts, Product } from '../../data/products';
 import RunwayItem from './RunwayItem';
 import FloatingCart from './FloatingCart';
 import CheckoutModal from './CheckoutModal';
 import { cartStore } from '../../lib/cart';
 import gsap from 'gsap';
+import { Loader2 } from 'lucide-react';
 
 const RunwayProducts: React.FC = () => {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(cartStore.items.length);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      const data = await fetchProducts();
+      setProducts(data);
+      setLoading(false);
+    };
+    loadProducts();
+
     const unsubscribe = cartStore.subscribe(() => {
       setCartCount(cartStore.items.reduce((acc, item) => acc + item.quantity, 0));
     });
 
-    if (rowRef.current) {
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (!loading && rowRef.current && products.length > 0) {
       gsap.fromTo(rowRef.current,
         { opacity: 0, x: 50 },
         { 
@@ -32,16 +47,14 @@ const RunwayProducts: React.FC = () => {
         }
       );
     }
-
-    return unsubscribe;
-  }, []);
+  }, [loading, products.length]);
 
   const handleAddToCart = (product: Product) => {
     cartStore.addItem({
       id: `${product.id}-OS-DEFAULT`,
       name: product.name,
       price: product.price,
-      image: product.image,
+      image: product.images?.[0] || product.image || '',
       size: 'OS',
       color: 'DEFAULT',
       quantity: 1
@@ -54,22 +67,37 @@ const RunwayProducts: React.FC = () => {
     cartStore.setIsOpen(true);
   };
 
-  return (
-    <div className="relative bg-black py-10 overflow-hidden">
-      <div 
-        ref={rowRef}
-        className="flex flex-row overflow-x-auto overflow-y-hidden scrollbar-hide px-8 gap-4 scroll-smooth"
-        style={{ WebkitOverflowScrolling: 'touch' }}
-      >
-        {products.map((product, index) => (
-          <RunwayItem 
-            key={product.id} 
-            product={product} 
-            index={index} 
-            onAddToCart={handleAddToCart}
-          />
-        ))}
+  if (loading) {
+    return (
+      <div className="relative bg-black py-20 flex flex-col items-center justify-center text-accent font-tech">
+        <Loader2 className="animate-spin mb-4" size={24} />
+        <p className="text-[10px] tracking-[0.5em] uppercase">INITIALIZING_RUNWAY...</p>
       </div>
+    );
+  }
+
+  return (
+    <div className="relative bg-black py-10 overflow-hidden min-h-[400px]">
+      {products.length === 0 ? (
+        <div className="flex items-center justify-center h-40 border border-dashed border-white/10 mx-8 rounded-2xl text-white/20 font-tech text-[10px] uppercase tracking-widest">
+          No items manifested in core catalog
+        </div>
+      ) : (
+        <div 
+          ref={rowRef}
+          className="flex flex-row overflow-x-auto overflow-y-hidden scrollbar-hide px-8 gap-4 scroll-smooth"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          {products.map((product, index) => (
+            <RunwayItem 
+              key={product.id} 
+              product={product} 
+              index={index} 
+              onAddToCart={handleAddToCart}
+            />
+          ))}
+        </div>
+      )}
 
       <FloatingCart itemCount={cartCount} onClick={handleOpenCart} />
       
