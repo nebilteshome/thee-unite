@@ -146,6 +146,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const mainLinks = [
+    { name: 'Collection', path: '/collection' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Archive', path: '/archive' },
     { name: 'Foundry', path: '/foundry' },
@@ -319,7 +320,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <ShoppingBag size={64} strokeWidth={1} />
                       <p className="font-tech text-xs tracking-widest uppercase italic">Your bag is currently void</p>
                       <Link 
-                        to="/" 
+                        to="/collection" 
                         onClick={() => cartStore.setIsOpen(false)}
                         className="text-accent underline underline-offset-8 decoration-accent/30 font-black text-xs tracking-widest"
                       >

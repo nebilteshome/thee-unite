@@ -3,9 +3,12 @@ import { useEffect } from 'react';
 import Layout from './components/Layout';
 import { AuthProvider } from './contexts/AuthContext';
 import AdminGuard from './components/AdminGuard';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 
 // Pages
 import Home from './pages/Home';
+import Collection from './pages/Collection';
 import Shop from './pages/Shop';
 import Gallery from './pages/Gallery';
 import Archive from './pages/Archive';
@@ -27,6 +30,30 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+      wheelMultiplier: 1,
+      touchMultiplier: 2,
+      infinite: false,
+    });
+
+    function raf(time: number) {
+      lenis.raf(time);
+      requestAnimationFrame(raf);
+    }
+
+    requestAnimationFrame(raf);
+
+    return () => {
+      lenis.destroy();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>
@@ -34,6 +61,7 @@ export default function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/collection" element={<Collection />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/archive" element={<Archive />} />

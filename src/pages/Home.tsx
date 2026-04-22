@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import ProductSection from '../components/ProductSection';
+import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 import gsap from 'gsap';
@@ -271,7 +271,7 @@ export default function Home() {
       </section>
       
       <div className="relative z-30 bg-black">
-        <ProductSection />
+        <RunwayProducts />
       </div>
     </div>
   );

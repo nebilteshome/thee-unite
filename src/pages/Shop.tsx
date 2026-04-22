@@ -87,7 +87,7 @@ export default function Shop() {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
         <h2 className="text-4xl font-black uppercase italic mb-8">PRODUCT_NOT_FOUND</h2>
-        <Link to="/" className="text-accent underline underline-offset-8">RETURN_TO_DOMAIN</Link>
+        <Link to="/collection" className="text-accent underline underline-offset-8">RETURN_TO_DOMAIN</Link>
       </div>
     );
   }
@@ -96,8 +96,8 @@ export default function Shop() {
 
   return (
     <section className="py-20 px-6 max-w-7xl mx-auto min-h-screen">
-      <Link to="/" className="inline-flex items-center gap-2 text-[10px] font-tech text-white/40 hover:text-accent uppercase tracking-widest mb-12 transition-colors">
-        <ArrowLeft size={14} /> Back_To_Domain
+      <Link to="/collection" className="inline-flex items-center gap-2 text-[10px] font-tech text-white/40 hover:text-accent uppercase tracking-widest mb-12 transition-colors">
+        <ArrowLeft size={14} /> Back_To_Collection
       </Link>
 
       <div className="flex flex-col lg:flex-row gap-20">
