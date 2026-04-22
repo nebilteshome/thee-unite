@@ -76,6 +76,24 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     // DEMO MODE: Directly create order without real payment
     try {
       await runTransaction(db, async (transaction) => {
+        // 1. PERFORM ALL READS FIRST
+        const stockUpdates: { ref: any, newStock: number }[] = [];
+        
+        for (const item of cartItems) {
+          const productId = item.id.split('-')[0];
+          const productRef = doc(db, 'products', productId);
+          const productSnap = await transaction.get(productRef);
+          
+          if (productSnap.exists()) {
+            const currentStock = productSnap.data().stock ?? 0;
+            stockUpdates.push({
+              ref: productRef,
+              newStock: Math.max(0, currentStock - item.quantity)
+            });
+          }
+        }
+
+        // 2. PERFORM ALL WRITES SECOND
         const orderData = {
           items: cartItems.map(item => ({
             id: item.id,
@@ -103,16 +121,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         const orderRef = doc(collection(db, 'orders'));
         transaction.set(orderRef, orderData);
 
-        for (const item of cartItems) {
-          const productId = item.id.split('-')[0];
-          const productRef = doc(db, 'products', productId);
-          const productSnap = await transaction.get(productRef);
-          if (productSnap.exists()) {
-            const currentStock = productSnap.data().stock ?? 0;
-            transaction.update(productRef, {
-              stock: Math.max(0, currentStock - item.quantity)
-            });
-          }
+        for (const update of stockUpdates) {
+          transaction.update(update.ref, { stock: update.newStock });
         }
       });
       
