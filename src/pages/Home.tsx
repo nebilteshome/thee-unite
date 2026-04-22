@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -148,25 +148,66 @@ export default function Home() {
     bgUrl: '/hero-video.mp4',
     bgType: 'video'
   });
+  const [activeHero, setActiveHero] = useState<HeroSettings | null>(null);
   const [videoCanPlay, setVideoCanPlay] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  
   const heroRef = useRef<HTMLElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
 
+  // Live updates from Firestore with smooth transitions
   useEffect(() => {
-    const fetchHero = async () => {
-      const snap = await getDoc(doc(db, 'settings', 'hero'));
-      if (snap.exists()) setHero(snap.data() as HeroSettings);
-    };
-    fetchHero();
-  }, []);
+    const unsubscribe = onSnapshot(doc(db, 'settings', 'hero'), (snap) => {
+      if (snap.exists()) {
+        const newData = snap.data() as HeroSettings;
+        
+        // Initial load
+        if (!activeHero) {
+          preloadAsset(newData).then(() => {
+            setHero(newData);
+            setActiveHero(newData);
+          });
+          return;
+        }
 
-  useEffect(() => {
-    if (videoCanPlay && videoRef.current && hero.bgType === 'video') {
-      videoRef.current.play().catch(err => console.log("Video autoplay blocked:", err));
-    }
-  }, [videoCanPlay, hero.bgType]);
+        // If background changed, handle transition
+        if (newData.bgUrl !== activeHero.bgUrl || newData.bgType !== activeHero.bgType) {
+          preloadAsset(newData).then(() => {
+            setHero(newData);
+            setIsTransitioning(true);
+            // Duration should match transition in motion.div below
+            setTimeout(() => {
+              setActiveHero(newData);
+              setIsTransitioning(false);
+            }, 1000); 
+          });
+        } else {
+          // If only metadata (title, tagline, etc.) changed
+          setHero(newData);
+          setActiveHero(newData);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, [activeHero]);
+
+  const preloadAsset = (settings: HeroSettings): Promise<void> => {
+    return new Promise((resolve) => {
+      if (settings.bgType === 'video') {
+        const video = document.createElement('video');
+        video.src = `${settings.bgUrl}?v=${Date.now()}`; // Cache bust to force reload
+        video.preload = 'auto';
+        video.oncanplaythrough = () => resolve();
+        video.onerror = () => resolve(); // Avoid getting stuck
+      } else {
+        const img = new Image();
+        img.src = `${settings.bgUrl}?v=${Date.now()}`;
+        img.onload = () => resolve();
+        img.onerror = () => resolve();
+      }
+    });
+  };
 
   useEffect(() => {
     if (!heroRef.current || !overlayRef.current) return;
@@ -176,7 +217,7 @@ export default function Home() {
         scrollTrigger: {
           trigger: heroRef.current,
           start: 'top top',
-          end: '+=100%', // Pin for 100% of viewport height
+          end: '+=100%', 
           pin: true,
           scrub: 1,
           anticipatePin: 1,
@@ -195,41 +236,80 @@ export default function Home() {
         scale: 1.05,
         opacity: 0.4,
         duration: 1,
-      }, 0); // Concurrent animation
+      }, 0); 
 
     });
 
     return () => ctx.revert();
-  }, [videoCanPlay]); // Re-run when video is ready to ensure correct pinning heights
+  }, [videoCanPlay]); 
 
   return (
     <div className="bg-black">
       <section ref={heroRef} className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
-        {/* Background Video/Image Container */}
+        {/* Triple-layer Double Buffer Background Container */}
         <div ref={videoContainerRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
-          {hero.bgType === 'video' ? (
-            <video
-              ref={videoRef}
-              loop
-              muted
-              playsInline
-              key={hero.bgUrl}
-              className={`absolute inset-0 w-full h-full object-cover scale-100 brightness-[1.35] contrast-[1.1] transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-60' : 'opacity-0'}`}
-              src={hero.bgUrl}
-            />
-          ) : (
-            <img 
-              src={hero.bgUrl}
-              key={hero.bgUrl}
-              className={`absolute inset-0 w-full h-full object-cover scale-100 brightness-[1.1] transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-60' : 'opacity-0'}`}
-              onLoad={() => setVideoCanPlay(true)}
-            />
-          )}
-          <div className="absolute inset-0 bg-black/10 z-10" />
+          <AnimatePresence mode="popLayout">
+            {activeHero && (
+              <motion.div
+                key={activeHero.bgUrl + activeHero.bgType}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 w-full h-full"
+              >
+                {activeHero.bgType === 'video' ? (
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[1.35] contrast-[1.1] opacity-60"
+                    src={activeHero.bgUrl}
+                  />
+                ) : (
+                  <img 
+                    src={activeHero.bgUrl}
+                    className="absolute inset-0 w-full h-full object-cover brightness-[1.1] opacity-60"
+                  />
+                )}
+              </motion.div>
+            )}
+
+            {/* Next Layer Buffer (Preparing to swap) */}
+            {isTransitioning && hero.bgUrl !== activeHero?.bgUrl && (
+              <motion.div
+                key={hero.bgUrl + hero.bgType + "_preloading"}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 w-full h-full z-10"
+              >
+                {hero.bgType === 'video' ? (
+                  <video
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    preload="auto"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[1.35] contrast-[1.1] opacity-60"
+                    src={hero.bgUrl}
+                  />
+                ) : (
+                  <img 
+                    src={hero.bgUrl}
+                    className="absolute inset-0 w-full h-full object-cover brightness-[1.1] opacity-60"
+                  />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="absolute inset-0 bg-black/10 z-20" />
         </div>
 
         {/* Content Overlay */}
-        <div ref={overlayRef} className="relative z-20 text-center px-6 w-full max-w-screen-2xl mx-auto">
+        <div ref={overlayRef} className="relative z-30 text-center px-6 w-full max-w-screen-2xl mx-auto">
           <div className="flex flex-col items-center justify-center">
             <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
             

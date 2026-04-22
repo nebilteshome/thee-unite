@@ -779,16 +779,50 @@ export function GalleryManager() {
 
 export function HeroManager() {
   const [hero, setHero] = useState<HeroSettings>({ title: '', tagline: '', subtitle: '', bgUrl: '', bgType: 'video' });
+  const [activeBg, setActiveBg] = useState<{url: string, type: string} | null>(null);
+  const [isPreloading, setIsPreloading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
 
   useEffect(() => {
     const fetchHero = async () => {
       const snap = await getDoc(doc(db, 'settings', 'hero'));
-      if (snap.exists()) setHero(snap.data() as HeroSettings);
+      if (snap.exists()) {
+        const data = snap.data() as HeroSettings;
+        setHero(data);
+        setActiveBg({ url: data.bgUrl, type: data.bgType });
+      }
     };
     fetchHero();
   }, []);
+
+  // Handle preview preloading for smooth switching
+  useEffect(() => {
+    if (hero.bgUrl && activeBg && hero.bgUrl !== activeBg.url) {
+      setIsPreloading(true);
+      const preload = async () => {
+        if (hero.bgType === 'video') {
+          const video = document.createElement('video');
+          video.src = hero.bgUrl;
+          video.preload = 'auto';
+          video.oncanplaythrough = () => {
+            setActiveBg({ url: hero.bgUrl, type: hero.bgType });
+            setIsPreloading(false);
+          };
+        } else {
+          const img = new Image();
+          img.src = hero.bgUrl;
+          img.onload = () => {
+            setActiveBg({ url: hero.bgUrl, type: hero.bgType });
+            setIsPreloading(false);
+          };
+        }
+      };
+      preload();
+    } else if (hero.bgUrl && !activeBg) {
+      setActiveBg({ url: hero.bgUrl, type: hero.bgType });
+    }
+  }, [hero.bgUrl, hero.bgType, activeBg]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -804,8 +838,32 @@ export function HeroManager() {
       <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_SYNC</h2></header>
       <div className="max-w-2xl space-y-6">
         <div className="aspect-video bg-surface border border-white/5 relative overflow-hidden flex items-center justify-center">
-          {hero.bgType === 'video' ? <video src={hero.bgUrl} className="w-full h-full object-cover opacity-50" autoPlay loop muted /> : <img src={hero.bgUrl} className="w-full h-full object-cover opacity-50" />}
-          <button onClick={() => setShowPicker(true)} className="absolute bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase">SELECT_MEDIA</button>
+          <AnimatePresence mode="popLayout">
+            {activeBg && (
+              <motion.div
+                key={activeBg.url}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.5 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="absolute inset-0 w-full h-full"
+              >
+                {activeBg.type === 'video' ? (
+                  <video src={activeBg.url} className="w-full h-full object-cover" autoPlay loop muted />
+                ) : (
+                  <img src={activeBg.url} className="w-full h-full object-cover" />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {isPreloading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10 backdrop-blur-sm">
+              <Loader2 className="animate-spin text-accent" size={24} />
+            </div>
+          )}
+          
+          <button onClick={() => setShowPicker(true)} className="absolute z-20 bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase shadow-2xl">SELECT_MEDIA</button>
         </div>
         <Input label="Title" value={hero.title} onChange={v => setHero({...hero, title: v})} />
         <Input label="Tagline" value={hero.tagline} onChange={v => setHero({...hero, tagline: v})} />
