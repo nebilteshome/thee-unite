@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchProducts, Product } from '../data/products';
 import { Link } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import HoverVideo from '../components/home/HoverVideo';
 
 export default function Collection() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -11,6 +12,7 @@ export default function Collection() {
     const loadProducts = async () => {
       setLoading(true);
       const data = await fetchProducts();
+      console.log("Collection products fetched:", data);
       setProducts(data);
       setLoading(false);
     };
@@ -45,28 +47,55 @@ export default function Collection() {
           </div>
         ) : (
           products.map((product) => (
-            <Link to={`/shop?id=${product.id}`} key={product.id} className="group cursor-pointer">
-              <div className="relative aspect-[3/4] overflow-hidden bg-surface border border-white/5 mb-6 accent-glow">
-                <img 
-                  src={product.images?.[0] || product.image} 
-                  className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" 
-                  referrerPolicy="no-referrer" 
-                />
-                <div className="absolute top-4 left-4 z-10">
-                  <span className="bg-accent text-black px-3 py-1 text-[8px] font-black tracking-widest uppercase italic">{product.category}</span>
-                </div>
-              </div>
-              <div className="flex justify-between items-start px-2">
-                <div>
-                  <h3 className="font-black text-xl tracking-tighter uppercase group-hover:text-accent duration-300">{product.name}</h3>
-                  <p className="text-white/40 text-[9px] font-tech uppercase tracking-[0.3em]">Available Now</p>
-                </div>
-                <span className="font-bold text-accent text-lg italic">${product.price}</span>
-              </div>
-            </Link>
+            <ProductCard key={product.id} product={product} />
           ))
         )}
       </div>
     </section>
+  );
+}
+
+function ProductCard({ product }: { product: Product }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const imageSrc = product.images?.[0] || product.image || '';
+  const videoSrc = product.video;
+
+  return (
+    <Link 
+      to={`/shop?id=${product.id}`} 
+      className="group cursor-pointer"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative aspect-[3/4] overflow-hidden bg-surface border border-white/5 mb-6 accent-glow">
+        <img 
+          src={imageSrc} 
+          className={`w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`} 
+          referrerPolicy="no-referrer" 
+          onError={(e) => {
+            console.error(`Failed to load image for ${product.name}:`, imageSrc);
+          }}
+        />
+        
+        {videoSrc && (
+          <HoverVideo 
+            src={videoSrc} 
+            poster={imageSrc} 
+            isHovered={isHovered} 
+          />
+        )}
+
+        <div className="absolute top-4 left-4 z-10">
+          <span className="bg-accent text-black px-3 py-1 text-[8px] font-black tracking-widest uppercase italic">{product.category}</span>
+        </div>
+      </div>
+      <div className="flex justify-between items-start px-2">
+        <div>
+          <h3 className="font-black text-xl tracking-tighter uppercase group-hover:text-accent duration-300">{product.name}</h3>
+          <p className="text-white/40 text-[9px] font-tech uppercase tracking-[0.3em]">Available Now</p>
+        </div>
+        <span className="font-bold text-accent text-lg italic">${product.price}</span>
+      </div>
+    </Link>
   );
 }

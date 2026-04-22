@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '../../data/products';
 import HoverVideo from './HoverVideo';
 
@@ -11,6 +11,24 @@ interface RunwayItemProps {
 const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Debugging logs as requested
+  useEffect(() => {
+    if (product) {
+      console.log(`Homepage product: ${product.name}`, {
+        id: product.id,
+        image: product.image,
+        images: product.images,
+        video: product.video
+      });
+    }
+  }, [product]);
+
+  if (!product) return null;
+
+  // Use same logic as Collection.tsx for image source
+  const imageSrc = product.images?.[0] || product.image || '';
+  const videoSrc = product.video;
+
   return (
     <div 
       className="flex-shrink-0 w-[100px] md:w-[120px] cursor-pointer group mb-4"
@@ -21,12 +39,21 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-neutral-900 border border-white/5 shadow-lg rounded-lg">
         <img 
-          src={product.image} 
+          src={imageSrc} 
           alt={product.name}
-          className={`w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ${isHovered ? 'opacity-0' : 'opacity-100'}`}
+          className={`w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`}
+          onError={(e) => {
+            console.error(`Failed to load image for ${product.name}:`, imageSrc);
+            (e.target as HTMLImageElement).src = '/images/placeholder.jpg'; // Fallback to a placeholder if you have one
+          }}
         />
-        {product.video && (
-          <HoverVideo src={product.video} poster={product.image} isHovered={isHovered} />
+        
+        {videoSrc && (
+          <HoverVideo 
+            src={videoSrc} 
+            poster={imageSrc} 
+            isHovered={isHovered} 
+          />
         )}
         
         {/* Instant Add Hotspot Indicator */}
