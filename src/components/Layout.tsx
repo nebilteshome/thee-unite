@@ -331,7 +331,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                     cartItems.map((item) => (
                       <div key={item.id} className="flex gap-6 group animate-in fade-in slide-in-from-left-4 duration-500">
                         <div className="w-24 aspect-[3/4] bg-surface flex-shrink-0 overflow-hidden border border-white/5 relative">
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover grayscale transition-all group-hover:grayscale-0" />
+                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 flex flex-col justify-between py-1">
                           <div>

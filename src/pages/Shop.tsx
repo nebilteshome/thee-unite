@@ -113,7 +113,7 @@ export default function Shop() {
                 transition={{ duration: 0.5 }}
                 src={images[activeImageIndex]} 
                 alt={product.name} 
-                className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000"
+                className="w-full h-full object-cover transition-all duration-1000"
                 referrerPolicy="no-referrer"
               />
             </AnimatePresence>
@@ -149,7 +149,7 @@ export default function Shop() {
                 <button 
                   key={i} 
                   onClick={() => setActiveImageIndex(i)}
-                  className={`aspect-square border-2 overflow-hidden transition-all ${activeImageIndex === i ? 'border-accent grayscale-0' : 'border-white/5 grayscale hover:grayscale-0 hover:border-white/20'}`}
+                  className={`aspect-square border-2 overflow-hidden transition-all ${activeImageIndex === i ? 'border-accent' : 'border-white/5 hover:border-white/20'}`}
                 >
                   <img src={img} className="w-full h-full object-cover" />
                 </button>

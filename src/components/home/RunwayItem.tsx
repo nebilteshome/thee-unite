@@ -41,7 +41,7 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
         <img 
           src={imageSrc} 
           alt={product.name}
-          className={`w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`}
+          className={`w-full h-full object-cover transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`}
           onError={(e) => {
             console.error(`Failed to load image for ${product.name}:`, imageSrc);
             (e.target as HTMLImageElement).src = '/images/placeholder.jpg'; // Fallback to a placeholder if you have one

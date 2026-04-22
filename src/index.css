@@ -58,3 +58,10 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* Global Reset for Original Colors */
+img, video {
+  filter: none !important;
+  -webkit-filter: grayscale(0%) !important;
+  filter: grayscale(0%) !important;
+}

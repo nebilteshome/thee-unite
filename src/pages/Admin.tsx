@@ -306,7 +306,7 @@ export function ProductManager() {
               <div className="grid grid-cols-4 gap-4">
                 {formData.images.map((url, i) => (
                   <div key={i} className="relative aspect-square bg-black border border-white/10 group">
-                    <img src={url} className="w-full h-full object-cover grayscale" />
+                    <img src={url} className="w-full h-full object-cover" />
                     <button 
                       type="button"
                       onClick={() => setFormData(prev => ({ ...prev, images: prev.images.filter((_, idx) => idx !== i) }))}
@@ -348,7 +348,7 @@ export function ProductManager() {
           {products.map(p => (
             <div key={p.id} className="bg-surface/20 border border-white/5 p-4 flex gap-6 group hover:border-white/20 transition-all">
               <div className="w-20 aspect-square bg-black border border-white/10 overflow-hidden shrink-0">
-                <img src={p.images?.[0] || p.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                <img src={p.images?.[0] || p.image} className="w-full h-full object-cover transition-all" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-start">
@@ -986,6 +986,10 @@ function Input({ label, type = 'text', value, onChange, required = false }: { la
     <div className="space-y-2">
       <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">{label}</label>
       <input required={required} type={type} value={value} onChange={e => onChange(e.target.value)} className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors" />
+    </div>
+  );
+}
+>
     </div>
   );
 }
