@@ -6,7 +6,6 @@ import AdminGuard from './components/AdminGuard';
 
 // Pages
 import Home from './pages/Home';
-import Collection from './pages/Collection';
 import Shop from './pages/Shop';
 import Gallery from './pages/Gallery';
 import Archive from './pages/Archive';
@@ -35,7 +34,6 @@ export default function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/collection" element={<Collection />} />
             <Route path="/shop" element={<Shop />} />
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/archive" element={<Archive />} />
