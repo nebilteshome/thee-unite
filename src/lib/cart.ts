@@ -28,6 +28,17 @@ let cartItems: CartItem[] = [];
 let listeners: (() => void)[] = [];
 let isCartOpen = false;
 
+// Initialize from localStorage
+const savedCart = localStorage.getItem('thee_unite_cart');
+if (savedCart) {
+  try {
+    cartItems = JSON.parse(savedCart);
+  } catch (e) {
+    console.error("Failed to load cart from localStorage", e);
+    cartItems = [];
+  }
+}
+
 export const cartStore = {
   get items() { return cartItems; },
   get isOpen() { return isCartOpen; },
@@ -44,12 +55,14 @@ export const cartStore = {
     } else {
       cartItems = [...cartItems, item];
     }
+    this.save();
     this.notify();
     this.setIsOpen(true);
   },
 
   removeItem(id: string) {
     cartItems = cartItems.filter(i => i.id !== id);
+    this.save();
     this.notify();
   },
 
@@ -61,12 +74,18 @@ export const cartStore = {
       }
       return item;
     });
+    this.save();
     this.notify();
   },
 
   clearCart() {
     cartItems = [];
+    this.save();
     this.notify();
+  },
+
+  save() {
+    localStorage.setItem('thee_unite_cart', JSON.stringify(cartItems));
   },
 
   subscribe(listener: () => void) {

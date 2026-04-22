@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
 import { useSearchParams, Link } from 'react-router-dom';
 import { cartStore } from '../lib/cart';
 
@@ -10,6 +10,7 @@ interface Product {
   id: string;
   name: string;
   price: number;
+  stock: number;
   description: string;
   category: string;
   images: string[];
@@ -27,6 +28,8 @@ export default function Shop() {
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [showPolicy, setShowPolicy] = useState<'size' | 'shipping' | 'returns' | null>(null);
+  const [policies, setPolicies] = useState<any>(null);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -56,11 +59,16 @@ export default function Shop() {
         setLoading(false);
       }
     };
+    const fetchPolicies = async () => {
+      const snap = await getDoc(doc(db, 'settings', 'policies'));
+      if (snap.exists()) setPolicies(snap.data());
+    };
     fetchProduct();
+    fetchPolicies();
   }, [productId]);
 
   const handleAddToCart = () => {
-    if (!product) return;
+    if (!product || (product.stock !== undefined && product.stock <= 0)) return;
     const images = product.images || [product.image];
     cartStore.addItem({
       id: `${product.id}-${selectedSize}-${selectedColor}`,
@@ -190,7 +198,12 @@ export default function Shop() {
               <div className="space-y-4">
                 <div className="flex justify-between items-end">
                   <span className="font-tech text-[10px] tracking-[0.4em] uppercase text-white/40">Select_Size</span>
-                  <button className="text-[10px] font-black uppercase text-white/20 hover:text-accent underline decoration-accent/30">Size_Guide</button>
+                  <button 
+                    onClick={() => setShowPolicy('size')}
+                    className="text-[10px] font-black uppercase text-white/20 hover:text-accent underline decoration-accent/30"
+                  >
+                    Size_Guide
+                  </button>
                 </div>
                 <div className="grid grid-cols-5 gap-2">
                   {product.sizes.map(size => (
@@ -210,19 +223,40 @@ export default function Shop() {
             <div className="space-y-4 pt-4">
               <button 
                 onClick={handleAddToCart}
-                className="w-full bg-accent text-black py-6 font-black uppercase text-sm tracking-[0.4em] flex items-center justify-center gap-4 hover:bg-white transition-all transform hover:-translate-y-1 active:scale-95"
+                disabled={product.stock !== undefined && product.stock <= 0}
+                className={`w-full py-6 font-black uppercase text-sm tracking-[0.4em] flex items-center justify-center gap-4 transition-all transform ${
+                  product.stock !== undefined && product.stock <= 0 
+                    ? 'bg-white/10 text-white/20 cursor-not-allowed' 
+                    : 'bg-accent text-black hover:bg-white hover:-translate-y-1 active:scale-95'
+                }`}
               >
-                ADD_TO_BAG <Plus size={18} />
+                {product.stock !== undefined && product.stock <= 0 ? (
+                  <>OUT_OF_STOCK</>
+                ) : (
+                  <>ADD_TO_BAG <Plus size={18} /></>
+                )}
               </button>
+              <div className="flex justify-between items-center px-2">
+                <span className="font-tech text-[9px] tracking-[0.4em] uppercase text-white/20">Inventory_Status:</span>
+                <span className={`text-[10px] font-black uppercase italic ${product.stock > 0 ? 'text-accent' : 'text-red-500'}`}>
+                  {product.stock > 10 ? 'IN_STOCK' : product.stock > 0 ? `LOW_STOCK: ${product.stock}` : 'OUT_OF_MANIFEST'}
+                </span>
+              </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 border border-white/5 bg-surface text-center">
+                <button 
+                  onClick={() => setShowPolicy('shipping')}
+                  className="p-4 border border-white/5 bg-surface text-center hover:border-accent transition-all group"
+                >
                   <span className="font-tech text-[9px] tracking-widest uppercase text-white/20 block mb-1">Shipping</span>
-                  <span className="text-[10px] font-black uppercase tracking-tighter italic">World_Wide</span>
-                </div>
-                <div className="p-4 border border-white/5 bg-surface text-center">
+                  <span className="text-[10px] font-black uppercase tracking-tighter italic group-hover:text-accent">World_Wide</span>
+                </button>
+                <button 
+                  onClick={() => setShowPolicy('returns')}
+                  className="p-4 border border-white/5 bg-surface text-center hover:border-accent transition-all group"
+                >
                   <span className="font-tech text-[9px] tracking-widest uppercase text-white/20 block mb-1">Authenticity</span>
-                  <span className="text-[10px] font-black uppercase tracking-tighter italic">Greater_Domain</span>
-                </div>
+                  <span className="text-[10px] font-black uppercase tracking-tighter italic group-hover:text-accent">Greater_Domain</span>
+                </button>
               </div>
             </div>
           </div>
@@ -234,6 +268,38 @@ export default function Shop() {
           </div>
         </div>
       </div>
+
+      {/* Policy Modal */}
+      <AnimatePresence>
+        {showPolicy && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowPolicy(null)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl" 
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-surface border border-white/10 p-8 md:p-12 rounded-2xl max-h-[80vh] overflow-y-auto"
+            >
+              <h3 className="text-4xl font-black italic uppercase tracking-tighter mb-8 text-accent">
+                {showPolicy === 'size' ? 'SIZE_MANIFEST' : showPolicy === 'shipping' ? 'LOGISTICS_DATA' : 'RETURN_PROTOCOL'}
+              </h3>
+              <div className="font-tech text-xs tracking-widest uppercase leading-relaxed text-white/60 whitespace-pre-wrap">
+                {showPolicy === 'size' ? (policies?.sizeGuide || 'RETRIEVING_SIZE_DATA...') : 
+                 showPolicy === 'shipping' ? (policies?.shipping || 'RETRIEVING_SHIPPING_DATA...') : 
+                 (policies?.returns || 'RETRIEVING_RETURN_DATA...')}
+              </div>
+              <button 
+                onClick={() => setShowPolicy(null)}
+                className="mt-12 w-full py-4 border border-white/10 font-black uppercase text-[10px] tracking-[0.4em] hover:bg-white hover:text-black transition-all"
+              >
+                CLOSE_MANIFEST
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }

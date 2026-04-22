@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { cartStore } from '../lib/cart';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { auth } from '../lib/firebase';
+import { auth, db } from '../lib/firebase';
+import { collection, addDoc, serverTimestamp, runTransaction, doc } from 'firebase/firestore';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -26,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
   const config = {
     public_key: import.meta.env.VITE_FLUTTERWAVE_PUBLIC_KEY || '',
-    tx_ref: Date.now().toString(),
+    tx_ref: `THEE-${Date.now()}`,
     amount: subtotal,
     currency: 'USD',
     payment_options: 'card,mobilemoneyghana,mobilemoneyuganda,mobilemoneyrwanda,mobilemoneyzambia,mobilemoneytanzania,paypal',
@@ -45,15 +46,77 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const handleFlutterPayment = useFlutterwave(config);
 
   const handleCheckout = () => {
+    if (cartItems.length === 0) return;
+    
     setIsProcessing(true);
     
-    // Simulate a brief manifest processing
-    setTimeout(() => {
-      setIsProcessing(false);
-      cartStore.clearCart();
-      cartStore.setIsOpen(false);
-      alert('CHECKOUT COMPLETE');
-    }, 1500);
+    handleFlutterPayment({
+      callback: async (response) => {
+        console.log("Flutterwave Response:", response);
+        
+        if (response.status === "successful" || response.status === "completed") {
+          try {
+            // Write order to Firestore using a transaction to ensure stock update
+            await runTransaction(db, async (transaction) => {
+              // Create the order doc
+              const orderData = {
+                items: cartItems.map(item => ({
+                  id: item.id,
+                  productId: item.id.split('-')[0], // Extract real product ID
+                  name: item.name,
+                  price: item.price,
+                  quantity: item.quantity,
+                  size: item.size,
+                  color: item.color
+                })),
+                total: subtotal,
+                customer: config.customer,
+                payment: {
+                  reference: response.tx_ref,
+                  transaction_id: response.transaction_id,
+                  status: response.status
+                },
+                status: 'paid',
+                createdAt: serverTimestamp()
+              };
+
+              // Add the order
+              const orderRef = doc(collection(db, 'orders'));
+              transaction.set(orderRef, orderData);
+
+              // Decrement stock for each item
+              for (const item of cartItems) {
+                const productId = item.id.split('-')[0];
+                const productRef = doc(db, 'products', productId);
+                const productSnap = await transaction.get(productRef);
+                
+                if (productSnap.exists()) {
+                  const currentStock = productSnap.data().stock ?? 0;
+                  transaction.update(productRef, {
+                    stock: Math.max(0, currentStock - item.quantity)
+                  });
+                }
+              }
+            });
+            
+            cartStore.clearCart();
+            cartStore.setIsOpen(false);
+            alert('ORDER_MANIFESTED: Payment Successful');
+          } catch (error: any) {
+            console.error("Order creation failed:", error);
+            alert(`ORDER_FAILED: ${error.message}`);
+          }
+        } else {
+          alert('PAYMENT_INCOMPLETE: Please try again.');
+        }
+        
+        closePaymentModal();
+        setIsProcessing(false);
+      },
+      onClose: () => {
+        setIsProcessing(false);
+      },
+    });
   };
 
   const mainLinks = [

@@ -1,9 +1,26 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import admin from 'firebase-admin';
 
 dotenv.config();
 
+// Initialize Firebase Admin
+if (!admin.apps.length) {
+  try {
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.VITE_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+  } catch (error) {
+    console.error('Firebase admin initialization error', error);
+  }
+}
+
+const db = admin.firestore();
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -17,7 +34,6 @@ app.get('/', (req, res) => {
 
 /**
  * Flutterwave Webhook Endpoint
- * Flutterwave will send a POST request to this URL when a payment event occurs.
  */
 app.post('/webhook/flutterwave', async (req, res) => {
   const signature = req.headers['verif-hash'];
@@ -53,15 +69,52 @@ app.post('/webhook/flutterwave', async (req, res) => {
         // PAYMENT VERIFIED SUCCESSFULLY!
         console.log(`[VERIFIED] Payment of ${verifiedAmount} ${currency} confirmed for ${tx_ref}`);
         
-        // TODO: Update your database (e.g., Firestore) to mark order as paid
-        // Example:
-        // await db.collection('orders').doc(tx_ref).update({ status: 'paid', flutterwaveId: id });
+        // Update Firestore to mark order as paid
+        const ordersRef = db.collection('orders');
+        const q = await ordersRef.where('payment.reference', '==', tx_ref).limit(1).get();
+
+        if (!q.empty) {
+          const orderDoc = q.docs[0];
+          await orderDoc.ref.update({
+            status: 'paid',
+            'payment.webhook_verified': true,
+            'payment.flutterwave_id': id,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log(`Order ${orderDoc.id} marked as paid.`);
+        } else {
+          console.warn(`Order with reference ${tx_ref} not found in Firestore.`);
+          
+          // Optional: Create a "ghost" order or log for reconciliation
+          await db.collection('payment_logs').add({
+            tx_ref,
+            flutterwave_id: id,
+            status: 'verified_but_no_order',
+            amount: verifiedAmount,
+            currency,
+            receivedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+        }
         
       } else {
         console.warn(`[FAILED] Transaction verification failed for ID: ${id}`);
+        await db.collection('payment_logs').add({
+          tx_ref,
+          flutterwave_id: id,
+          status: 'verification_failed',
+          payload: data,
+          receivedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error verifying transaction:', error);
+      await db.collection('errors').add({
+        context: 'webhook_verification',
+        message: error.message,
+        tx_ref,
+        id,
+        receivedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
     }
   }
 
