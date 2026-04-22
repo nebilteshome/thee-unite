@@ -75,54 +75,61 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     
     // DEMO MODE: Directly create order without real payment
     try {
+      // 1. PRE-CALCULATE EVERYTHING OUTSIDE THE TRANSACTION
+      const productIds = Array.from(new Set(cartItems.map(item => item.id.split('-')[0])));
+      const productRefs = productIds.map(id => doc(db, 'products', id));
+      const orderRef = doc(collection(db, 'orders'));
+      
+      const productQuantities = new Map();
+      for (const item of cartItems) {
+        const productId = item.id.split('-')[0];
+        productQuantities.set(productId, (productQuantities.get(productId) || 0) + item.quantity);
+      }
+
+      const orderData = {
+        items: cartItems.map(item => ({
+          id: item.id,
+          productId: item.id.split('-')[0],
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          size: item.size,
+          color: item.color
+        })),
+        total: subtotal,
+        customer: {
+          ...config.customer,
+          ...shippingDetails
+        },
+        payment: {
+          reference: config.tx_ref,
+          status: 'demo_success',
+          method: 'demo'
+        },
+        status: 'paid',
+        createdAt: serverTimestamp()
+      };
+
       await runTransaction(db, async (transaction) => {
-        // 1. PERFORM ALL READS FIRST
-        const stockUpdates: { ref: any, newStock: number }[] = [];
-        
-        for (const item of cartItems) {
-          const productId = item.id.split('-')[0];
-          const productRef = doc(db, 'products', productId);
-          const productSnap = await transaction.get(productRef);
-          
-          if (productSnap.exists()) {
-            const currentStock = productSnap.data().stock ?? 0;
-            stockUpdates.push({
-              ref: productRef,
-              newStock: Math.max(0, currentStock - item.quantity)
-            });
-          }
+        // 2. PERFORM ALL READS FIRST
+        const snapshots = [];
+        for (const ref of productRefs) {
+          const snap = await transaction.get(ref);
+          snapshots.push(snap);
         }
 
-        // 2. PERFORM ALL WRITES SECOND
-        const orderData = {
-          items: cartItems.map(item => ({
-            id: item.id,
-            productId: item.id.split('-')[0],
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            size: item.size,
-            color: item.color
-          })),
-          total: subtotal,
-          customer: {
-            ...config.customer,
-            ...shippingDetails
-          },
-          payment: {
-            reference: config.tx_ref,
-            status: 'demo_success',
-            method: 'demo'
-          },
-          status: 'paid',
-          createdAt: serverTimestamp()
-        };
-
-        const orderRef = doc(collection(db, 'orders'));
+        // 3. PERFORM ALL WRITES SECOND (Synchronous queueing)
         transaction.set(orderRef, orderData);
-
-        for (const update of stockUpdates) {
-          transaction.update(update.ref, { stock: update.newStock });
+        
+        for (const snap of snapshots) {
+          if (snap.exists()) {
+            const currentStock = snap.data().stock ?? 0;
+            const productId = snap.id;
+            const quantity = productQuantities.get(productId) || 0;
+            transaction.update(snap.ref, { 
+              stock: Math.max(0, currentStock - quantity) 
+            });
+          }
         }
       });
       
