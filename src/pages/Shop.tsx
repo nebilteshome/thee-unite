@@ -82,6 +82,14 @@ export default function Shop() {
     });
   };
 
+  const handleDismiss = () => {
+    if (window.history.length > 2) {
+      navigate(-1);
+    } else {
+      navigate('/');
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent">SYNCHRONIZING_PRODUCT...</div>;
 
   if (!product) {
@@ -103,8 +111,8 @@ export default function Shop() {
         </Link>
         
         <button 
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-[10px] font-tech text-accent hover:text-white uppercase tracking-[0.3em] transition-colors group"
+          onClick={handleDismiss}
+          className="flex items-center gap-2 text-[10px] font-tech text-accent hover:text-white uppercase tracking-[0.3em] transition-all group bg-white/5 px-4 py-2 rounded-full border border-white/10 hover:border-accent/50"
         >
           Dismiss <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
         </button>
