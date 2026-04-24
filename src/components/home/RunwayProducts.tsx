@@ -55,9 +55,7 @@ const RunwayProducts: React.FC = () => {
       size: 'OS',
       color: 'DEFAULT',
       quantity: 1
-    });
-    // Visual feedback could be added here if desired, 
-    // but the request is just to add to cart without opening anything.
+    }, false); // Set openCart to false
   };
 
   const handleOpenCart = () => {

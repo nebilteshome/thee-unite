@@ -48,7 +48,7 @@ export const cartStore = {
     this.notify();
   },
 
-  addItem(item: CartItem) {
+  addItem(item: CartItem, openCart: boolean = true) {
     const existingIndex = cartItems.findIndex(i => i.id === item.id);
     if (existingIndex > -1) {
       cartItems[existingIndex].quantity += 1;
@@ -57,7 +57,9 @@ export const cartStore = {
     }
     this.save();
     this.notify();
-    this.setIsOpen(true);
+    if (openCart) {
+      this.setIsOpen(true);
+    }
   },
 
   removeItem(id: string) {
