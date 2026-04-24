@@ -14,6 +14,10 @@ import Gallery from './pages/Gallery';
 import Archive from './pages/Archive';
 import Foundry from './pages/Foundry';
 import Admin, { ProductManager, GalleryManager, HeroManager, PaymentManager, OrderManager, PolicyManager } from './pages/Admin';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import gsap from 'gsap';
+
+gsap.registerPlugin(ScrollTrigger);
 
 /**
  * @license
@@ -42,15 +46,18 @@ export default function App() {
       infinite: false,
     });
 
+    let rafId: number;
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      ScrollTrigger.update();
+      rafId = requestAnimationFrame(raf);
     }
 
-    requestAnimationFrame(raf);
+    rafId = requestAnimationFrame(raf);
 
     return () => {
       lenis.destroy();
+      cancelAnimationFrame(rafId);
     };
   }, []);
 

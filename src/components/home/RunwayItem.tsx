@@ -41,6 +41,7 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
         <img 
           src={imageSrc} 
           alt={product.name}
+          loading="lazy"
           className={`w-full h-full object-cover transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`}
           onError={(e) => {
             console.error(`Failed to load image for ${product.name}:`, imageSrc);

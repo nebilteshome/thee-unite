@@ -75,17 +75,6 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
               viewBox="0 0 320 150" 
               className="w-[120px] sm:w-[180px] md:w-[240px] h-auto overflow-visible"
             >
-              <defs>
-                <style>{`
-                  @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
-                  .thee-text-home {
-                    font-family: 'Anton', sans-serif;
-                    font-size: 150px;
-                    font-style: italic;
-                    text-transform: uppercase;
-                  }
-                `}</style>
-              </defs>
               <motion.text
                 x="0"
                 y="115"
@@ -196,13 +185,13 @@ export default function Home() {
     return new Promise((resolve) => {
       if (settings.bgType === 'video') {
         const video = document.createElement('video');
-        video.src = `${settings.bgUrl}?v=${Date.now()}`; // Cache bust to force reload
+        video.src = settings.bgUrl;
         video.preload = 'auto';
         video.oncanplaythrough = () => resolve();
         video.onerror = () => resolve(); // Avoid getting stuck
       } else {
         const img = new Image();
-        img.src = `${settings.bgUrl}?v=${Date.now()}`;
+        img.src = settings.bgUrl;
         img.onload = () => resolve();
         img.onerror = () => resolve();
       }

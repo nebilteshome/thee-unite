@@ -70,6 +70,7 @@ function ProductCard({ product }: { product: Product }) {
       <div className="relative aspect-[3/4] overflow-hidden bg-surface border border-white/5 mb-6 accent-glow">
         <img 
           src={imageSrc} 
+          loading="lazy"
           className={`w-full h-full object-cover transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`} 
           referrerPolicy="no-referrer" 
           onError={(e) => {

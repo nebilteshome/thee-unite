@@ -89,17 +89,6 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
               viewBox="0 0 280 150" 
               className="w-[110px] md:w-[200px] h-auto overflow-visible"
             >
-              <defs>
-                <style>{`
-                  @import url('https://fonts.googleapis.com/css2?family=Anton&display=swap');
-                  .thee-text {
-                    font-family: 'Anton', sans-serif;
-                    font-size: 130px;
-                    font-style: italic;
-                    text-transform: uppercase;
-                  }
-                `}</style>
-              </defs>
               <motion.text
                 x="0"
                 y="115"

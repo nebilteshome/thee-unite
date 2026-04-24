@@ -51,6 +51,20 @@
   perspective: 1000px;
 }
 
+.thee-text-home {
+  font-family: 'Anton', sans-serif;
+  font-size: 150px;
+  font-style: italic;
+  text-transform: uppercase;
+}
+
+.thee-text {
+  font-family: 'Anton', sans-serif;
+  font-size: 130px;
+  font-style: italic;
+  text-transform: uppercase;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

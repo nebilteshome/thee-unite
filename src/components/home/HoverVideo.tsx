@@ -29,6 +29,7 @@ const HoverVideo: React.FC<HoverVideoProps> = ({ src, poster, isHovered }) => {
         muted
         loop
         playsInline
+        preload="metadata"
         className={`w-full h-full object-cover transition-opacity duration-500 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
       />
     </div>
