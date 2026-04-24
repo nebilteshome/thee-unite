@@ -175,7 +175,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Center Logo */}
         <div className="flex-none">
-          <Link to="/" className="font-display text-3xl text-white uppercase cursor-pointer hover:opacity-80 transition-opacity leading-none tracking-[0.2em]">
+          <Link to="/" className="font-display text-3xl text-accent uppercase cursor-pointer hover:opacity-80 transition-opacity leading-none tracking-[0.2em]">
             UNITE
           </Link>
         </div>

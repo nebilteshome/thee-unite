@@ -122,7 +122,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
             }}
             className="overflow-hidden whitespace-nowrap flex items-center"
           >
-            <span className="text-7xl md:text-[12rem] font-display uppercase italic text-outline-accent leading-none pr-8">
+            <span className="text-7xl md:text-[12rem] font-display uppercase italic leading-none pr-8 text-accent">
               UNITE
             </span>
           </motion.div>
