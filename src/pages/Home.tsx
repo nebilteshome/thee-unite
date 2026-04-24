@@ -108,7 +108,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
             }}
             className="overflow-hidden whitespace-nowrap flex items-center"
           >
-            <span className="text-7xl sm:text-9xl md:text-[14vw] font-black uppercase tracking-tighter italic text-outline-accent leading-none pr-8">
+            <span className="text-7xl sm:text-9xl md:text-[14vw] font-display uppercase tracking-tighter italic leading-none pr-8">
               UNITE
             </span>
           </motion.div>
@@ -122,7 +122,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], onComplete }}
-      className="text-6xl sm:text-8xl md:text-[12vw] font-black uppercase tracking-tighter italic leading-none"
+      className="text-6xl sm:text-8xl md:text-[12vw] font-display uppercase tracking-tighter italic leading-none"
     >
       {title}
     </motion.h1>
@@ -254,13 +254,13 @@ export default function Home() {
                     muted
                     playsInline
                     preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[1.35] contrast-[1.1] opacity-60"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7] opacity-100"
                     src={activeHero.bgUrl}
                   />
                 ) : (
                   <img 
                     src={activeHero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[1.1] opacity-60"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8] opacity-100"
                   />
                 )}
               </motion.div>
@@ -282,59 +282,65 @@ export default function Home() {
                     muted
                     playsInline
                     preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[1.35] contrast-[1.1] opacity-60"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7] opacity-100"
                     src={hero.bgUrl}
                   />
                 ) : (
                   <img 
                     src={hero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[1.1] opacity-60"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8] opacity-100"
                   />
                 )}
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="absolute inset-0 bg-black/10 z-20" />
+          <div className="absolute inset-0 bg-black/30 z-20" />
         </div>
 
         {/* Content Overlay */}
-        <div ref={overlayRef} className="relative z-30 text-center px-6 w-full max-w-screen-2xl mx-auto">
-          <div className="flex flex-col items-center justify-center">
-            <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
-            
+        <div ref={overlayRef} className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-32">
+          <div className="max-w-4xl mx-auto w-full">
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={videoCanPlay ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+              transition={{ delay: 0.3, duration: 0.8 }}
+              className="font-tech text-xs tracking-[0.4em] uppercase text-white mb-4"
+            >
+              {hero.tagline}
+            </motion.p>
+
+            <div className="mb-8">
+              <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
+            </div>
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={videoCanPlay ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="flex items-center justify-center gap-6 mt-8"
+              transition={{ delay: 0.7, duration: 0.8 }}
+              className="flex flex-row items-center justify-center gap-4"
             >
-              <div className="h-px w-8 bg-white/20" />
-              <p className="font-tech text-sm md:text-lg tracking-[0.6em] text-accent font-black uppercase">
-                {hero.tagline}
-              </p>
-              <div className="h-px w-8 bg-white/20" />
+              <Link 
+                to="/shop"
+                className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors"
+              >
+                Shop Now
+              </Link>
+              <Link 
+                to="/collection"
+                className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors"
+              >
+                The Story
+              </Link>
             </motion.div>
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={videoCanPlay ? { opacity: 0.5 } : { opacity: 0 }}
-              transition={{ delay: 1, duration: 1 }}
-              className="mt-6 font-tech text-[10px] tracking-[0.4em] uppercase text-white/60 max-w-md mx-auto"
-            >
-              {hero.subtitle}
-            </motion.p>
           </div>
 
           <motion.div
             initial={{ opacity: 0 }}
             animate={videoCanPlay ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ delay: 1.5, duration: 1 }}
-            className="absolute bottom-[-100px] left-1/2 -translate-x-1/2"
+            transition={{ delay: 1.2, duration: 1 }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2"
           >
-            <div className="group flex flex-col items-center gap-4">
-              <span className="font-tech text-[10px] tracking-[0.4em] text-white/30 uppercase group-hover:text-accent transition-colors">Scroll to explore</span>
-              <div className="w-px h-16 bg-gradient-to-b from-accent to-transparent" />
-            </div>
+            <div className="w-1 h-12 bg-gradient-to-b from-white to-transparent opacity-20" />
           </motion.div>
         </div>
       </section>

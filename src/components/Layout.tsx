@@ -164,40 +164,51 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <div className="greater-than-mask bottom-[-100px] right-[-100px] rotate-180 opacity-[0.02]">{'>'}</div>
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-8">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="font-display text-4xl text-accent uppercase cursor-pointer hover:opacity-80 transition-opacity leading-none tracking-normal">
+      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6">
+        {/* Left Side */}
+        <div className="hidden md:flex items-center gap-8 flex-1">
+          <Link to="/shop" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors">Shop</Link>
+          <Link to="/collection" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors flex items-center gap-1">
+            247 <span className="text-accent">⚡</span>
+          </Link>
+        </div>
+
+        {/* Center Logo */}
+        <div className="flex-none">
+          <Link to="/" className="font-display text-3xl text-white uppercase cursor-pointer hover:opacity-80 transition-opacity leading-none tracking-[0.2em]">
             UNITE
           </Link>
-          <div className="hidden md:flex gap-12 text-[10px] tracking-[0.2em] uppercase font-medium text-white/50">
-            {mainLinks.map((link) => (
-              <Link 
-                key={link.path} 
-                to={link.path} 
-                className={`transition-colors h-full flex items-center ${location.pathname === link.path ? 'text-accent' : 'hover:text-white'}`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </div>
         </div>
         
-        <div className="flex items-center gap-12">
-          <motion.button 
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => cartStore.setIsOpen(true)}
-            className="flex items-center gap-2 group text-[10px] tracking-[0.2em] uppercase font-bold text-accent relative"
-          >
-            <ShoppingBag size={14} />
-            <span>Shop Now [{totalItems}]</span>
-          </motion.button>
-          <button 
-            onClick={() => setIsOpen(!isOpen)}
-            className="p-1 hover:bg-white/10 rounded-full transition-colors md:hidden"
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+        {/* Right Side */}
+        <div className="flex items-center justify-end gap-8 flex-1">
+          <div className="hidden md:flex items-center gap-8 text-[10px] tracking-[0.2em] uppercase font-bold">
+            <Link to="/gallery" className="hover:text-accent transition-colors">Gallery</Link>
+            <Link to="/archive" className="hover:text-accent transition-colors">Archive</Link>
+            <Link to="/foundry" className="hover:text-accent transition-colors">Foundry</Link>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            <motion.button 
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => cartStore.setIsOpen(true)}
+              className="relative text-white hover:text-accent transition-colors"
+            >
+              <ShoppingBag size={20} />
+              {totalItems > 0 && (
+                <span className="absolute -top-1 -right-1 bg-accent text-black text-[8px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  {totalItems}
+                </span>
+              )}
+            </motion.button>
+            <button 
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-1 hover:bg-white/10 rounded-full transition-colors md:hidden"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
       </nav>
 
