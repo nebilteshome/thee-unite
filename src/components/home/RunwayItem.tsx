@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product } from '../../data/products';
 import HoverVideo from './HoverVideo';
+import { useNavigate } from 'react-router-dom';
 
 interface RunwayItemProps {
   product: Product;
@@ -10,6 +11,7 @@ interface RunwayItemProps {
 
 const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
 
   // Debugging logs as requested
   useEffect(() => {
@@ -30,12 +32,21 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
   const secondImage = product.images?.[1];
   const videoSrc = product.video;
 
+  const handleCardClick = () => {
+    navigate(`/shop?id=${product.id}`);
+  };
+
+  const handleQuickAdd = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigating to shop page
+    onAddToCart(product);
+  };
+
   return (
     <div 
       className="flex-shrink-0 w-[100px] md:w-[120px] cursor-pointer group mb-4"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={() => onAddToCart(product)}
+      onClick={handleCardClick}
       style={{ willChange: 'transform' }}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-neutral-900 border border-white/5 shadow-lg rounded-lg">
@@ -71,8 +82,11 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
         )}
         
         {/* Instant Add Hotspot Indicator */}
-        <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 scale-75">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-black">
+        <div 
+          onClick={handleQuickAdd}
+          className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-all duration-300 scale-75 hover:scale-90 z-10"
+        >
+          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-black shadow-xl">
             <span className="text-lg font-black">+</span>
           </div>
         </div>
