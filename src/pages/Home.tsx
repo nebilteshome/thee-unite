@@ -4,10 +4,6 @@ import { Link } from 'react-router-dom';
 import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 interface HeroSettings {
   title: string;
@@ -140,10 +136,6 @@ export default function Home() {
   const [activeHero, setActiveHero] = useState<HeroSettings | null>(null);
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
-  
-  const heroRef = useRef<HTMLElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const videoContainerRef = useRef<HTMLDivElement>(null);
 
   // Live updates from Firestore with smooth transitions
   useEffect(() => {
@@ -198,45 +190,11 @@ export default function Home() {
     });
   };
 
-  useEffect(() => {
-    if (!heroRef.current || !overlayRef.current) return;
-
-    let ctx = gsap.context(() => {
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: heroRef.current,
-          start: 'top top',
-          end: '+=100%', 
-          pin: true,
-          scrub: 1,
-          anticipatePin: 1,
-        }
-      });
-
-      tl.to(overlayRef.current, {
-        y: -150,
-        opacity: 0,
-        scale: 0.95,
-        filter: 'blur(10px)',
-        duration: 1,
-        ease: 'power2.inOut'
-      })
-      .to(videoContainerRef.current, {
-        scale: 1.05,
-        opacity: 0.4,
-        duration: 1,
-      }, 0); 
-
-    });
-
-    return () => ctx.revert();
-  }, [videoCanPlay]); 
-
   return (
     <div className="bg-black">
-      <section ref={heroRef} className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
+      <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
         {/* Triple-layer Double Buffer Background Container */}
-        <div ref={videoContainerRef} className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           <AnimatePresence mode="popLayout">
             {activeHero && (
               <motion.div
@@ -298,7 +256,7 @@ export default function Home() {
         </div>
 
         {/* Content Overlay */}
-        <div ref={overlayRef} className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-32">
+        <div className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-32">
           <div className="max-w-4xl mx-auto w-full">
             <motion.p
               initial={{ opacity: 0, y: 20 }}
