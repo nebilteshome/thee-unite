@@ -101,7 +101,7 @@ export default function Admin() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent">SYNCHRONIZING_CORE...</div>;
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent">SYNCHRONIZING CORE...</div>;
 
   if (!user || !adminStatus) {
     return <LoginView user={user} adminStatus={adminStatus} onLogin={handleLogin} />;
@@ -112,7 +112,7 @@ export default function Admin() {
       {/* Sidebar */}
       <aside className="w-full md:w-64 border-r border-white/10 p-6 flex flex-col gap-8 shrink-0">
         <div>
-          <span className="font-tech text-[10px] tracking-[0.4em] text-accent uppercase mb-2 block">ADMIN_PANEL_v2.1</span>
+          <span className="font-tech text-[10px] tracking-[0.4em] text-accent uppercase mb-2 block">ADMIN PANEL v2.1</span>
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">MANIFESTOR</h1>
         </div>
 
@@ -120,7 +120,7 @@ export default function Admin() {
           <TabButton to="/admin/products" icon={<ShoppingBag size={18} />} label="PRODUCTS" />
           <TabButton to="/admin/orders" icon={<Hash size={18} />} label="ORDERS" />
           <TabButton to="/admin/gallerycore" icon={<ImageIcon size={18} />} label="GALLERY" />
-          <TabButton to="/admin/heros" icon={<LayoutIcon size={18} />} label="HERO_SECTION" />
+          <TabButton to="/admin/heros" icon={<LayoutIcon size={18} />} label="HERO SECTION" />
           <TabButton to="/admin/policies" icon={<Database size={18} />} label="POLICIES" />
           <TabButton to="/admin/payments" icon={<CreditCard size={18} />} label="PAYMENTS" />
         </nav>
@@ -132,11 +132,11 @@ export default function Admin() {
             </div>
             <div className="overflow-hidden">
               <p className="text-[10px] font-black italic truncate">{user.displayName}</p>
-              <p className="text-[8px] text-white/40 font-tech truncate">SUPER_ADMIN</p>
+              <p className="text-[8px] text-white/40 font-tech truncate">SUPER ADMIN</p>
             </div>
           </div>
           <button onClick={() => auth.signOut()} className="w-full flex items-center gap-3 px-4 py-3 text-xs font-tech text-white/30 hover:text-red-500 transition-colors">
-            <LogOut size={16} /> LOGOUT_SYSTEM
+            <LogOut size={16} /> LOGOUT SYSTEM
           </button>
         </div>
       </aside>
@@ -252,15 +252,15 @@ export function ProductManager() {
       {showPicker && <AssetPicker onSelect={(url) => { setFormData(p => ({ ...p, images: [...p.images, url] })); setShowPicker(false); }} onClose={() => setShowPicker(false)} />}
       
       <header className="flex justify-between items-end mb-12">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter">PRODUCT_CORE</h2>
-        <p className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{products.length} OBJECTS_MANIFESTED</p>
+        <h2 className="text-4xl font-black italic uppercase tracking-tighter">PRODUCT CORE</h2>
+        <p className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{products.length} OBJECTS MANIFESTED</p>
       </header>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
         <div className="bg-surface/30 border border-white/5 p-8 rounded-2xl h-fit">
           <h3 className="text-xl font-black italic uppercase mb-8 flex items-center gap-4">
-            {isEditing ? 'UPDATE_FREQUENCY' : 'NEW_ENTRY'} 
-            {isEditing && <button onClick={resetForm} className="text-[10px] font-tech text-accent underline ml-auto">CANCEL_EDIT</button>}
+            {isEditing ? 'UPDATE FREQUENCY' : 'NEW ENTRY'} 
+            {isEditing && <button onClick={resetForm} className="text-[10px] font-tech text-accent underline ml-auto">CANCEL EDIT</button>}
           </h3>
           
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -268,11 +268,11 @@ export function ProductManager() {
               <div className="col-span-2">
                 <Input label="Name" value={formData.name} onChange={v => setFormData({...formData, name: v})} required />
               </div>
-              <Input label="Price_USD" type="number" value={formData.price} onChange={v => setFormData({...formData, price: v})} required />
+              <Input label="Price USD" type="number" value={formData.price} onChange={v => setFormData({...formData, price: v})} required />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <Input label="Inventory_Stock" type="number" value={formData.stock} onChange={v => setFormData({...formData, stock: v})} required />
+              <Input label="Inventory Stock" type="number" value={formData.stock} onChange={v => setFormData({...formData, stock: v})} required />
               <div className="space-y-2">
                 <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Category</label>
                 <select 
@@ -302,7 +302,7 @@ export function ProductManager() {
             </div>
 
             <div className="space-y-4">
-              <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Visuals_Data</label>
+              <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Visuals Data</label>
               <div className="grid grid-cols-4 gap-4">
                 {formData.images.map((url, i) => (
                   <div key={i} className="relative aspect-square bg-black border border-white/10 group">
@@ -338,7 +338,7 @@ export function ProductManager() {
               className="w-full bg-accent text-black py-4 font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 disabled:opacity-50"
             >
               {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-              {isEditing ? 'SYNCHRONIZE_CHANGES' : 'MANIFEST_OBJECT'}
+              {isEditing ? 'SYNCHRONIZE CHANGES' : 'MANIFEST OBJECT'}
             </button>
           </form>
         </div>
@@ -398,11 +398,11 @@ export function OrderManager() {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
       <header className="flex justify-between items-end mb-12">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter">ORDER_LOGS</h2>
+        <h2 className="text-4xl font-black italic uppercase tracking-tighter">ORDER LOGS</h2>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={14} />
           <input 
-            placeholder="SEARCH_ORDERS..." 
+            placeholder="SEARCH ORDERS..." 
             value={filter}
             onChange={e => setFilter(e.target.value)}
             className="bg-black border border-white/10 p-3 pl-10 font-tech text-[10px] uppercase text-accent outline-none w-64"
@@ -412,7 +412,7 @@ export function OrderManager() {
 
       <div className="space-y-4">
         {loading ? (
-          <div className="py-20 text-center font-tech text-xs text-accent">RETRIEVING_MANIFESTS...</div>
+          <div className="py-20 text-center font-tech text-xs text-accent">RETRIEVING MANIFESTS...</div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center border border-dashed border-white/10 text-white/20 font-tech text-xs uppercase">No orders detected in core</div>
         ) : (
@@ -420,7 +420,7 @@ export function OrderManager() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-white/10 font-tech text-[9px] text-white/30 uppercase tracking-[0.3em]">
-                  <th className="pb-4 pl-4">Manifest_ID</th>
+                  <th className="pb-4 pl-4">Manifest ID</th>
                   <th className="pb-4">Customer</th>
                   <th className="pb-4">Location</th>
                   <th className="pb-4">Items</th>
@@ -722,7 +722,7 @@ export function GalleryManager() {
 
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
         <div>
-          <h2 className="text-6xl font-black italic uppercase tracking-tighter leading-none mb-4">GALLERY_CORE</h2>
+          <h2 className="text-6xl font-black italic uppercase tracking-tighter leading-none mb-4">GALLERY CORE</h2>
           <div className="flex gap-8 mt-8 border-b border-white/10">
             <button onClick={() => setActiveSubTab('gallery')} className={`text-[11px] font-black uppercase tracking-[0.4em] pb-3 ${activeSubTab === 'gallery' ? 'text-accent' : 'text-white/20'}`}>LIVE ({items.length})</button>
             <button onClick={() => setActiveSubTab('repository')} className={`text-[11px] font-black uppercase tracking-[0.4em] pb-3 ${activeSubTab === 'repository' ? 'text-accent' : 'text-white/20'}`}>STAGING ({repoAssets.length})</button>
@@ -731,7 +731,7 @@ export function GalleryManager() {
         <div className="flex gap-4">
           <button onClick={() => setShowPicker(true)} className="bg-white/5 border border-white/10 text-white px-8 py-4 font-black uppercase text-[10px] tracking-[0.3em]">LIBRARY</button>
           <label className="bg-accent text-black px-10 py-4 font-black uppercase text-[10px] tracking-[0.3em] cursor-pointer">
-            {uploading ? 'UPLOADING...' : 'ADD_MEDIA'}
+            {uploading ? 'UPLOADING...' : 'ADD MEDIA'}
             <input type="file" multiple className="hidden" onChange={handleUpload} />
           </label>
         </div>
@@ -835,7 +835,7 @@ export function HeroManager() {
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
       {showPicker && <AssetPicker onSelect={(url) => { setHero(h => ({ ...h, bgUrl: url, bgType: url.endsWith('.mp4') ? 'video' : 'image' })); setShowPicker(false); }} onClose={() => setShowPicker(false)} />}
-      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_SYNC</h2></header>
+      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO SYNC</h2></header>
       <div className="max-w-2xl space-y-6">
         <div className="aspect-video bg-surface border border-white/5 relative overflow-hidden flex items-center justify-center">
           <AnimatePresence mode="popLayout">
@@ -863,13 +863,13 @@ export function HeroManager() {
             </div>
           )}
           
-          <button onClick={() => setShowPicker(true)} className="absolute z-20 bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase shadow-2xl">SELECT_MEDIA</button>
+          <button onClick={() => setShowPicker(true)} className="absolute z-20 bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase shadow-2xl">SELECT MEDIA</button>
         </div>
         <Input label="Title" value={hero.title} onChange={v => setHero({...hero, title: v})} />
         <Input label="Tagline" value={hero.tagline} onChange={v => setHero({...hero, tagline: v})} />
         <Input label="Subtitle" value={hero.subtitle} onChange={v => setHero({...hero, subtitle: v})} />
         <button disabled={saving} onClick={handleSave} className="w-full bg-accent text-black py-4 font-black uppercase tracking-widest flex items-center justify-center gap-4">
-          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SAVE_HERO
+          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SAVE HERO
         </button>
       </div>
     </motion.div>
@@ -898,22 +898,22 @@ export function PolicyManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">POLICY_CORE</h2></header>
+      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">POLICY CORE</h2></header>
       <div className="max-w-3xl space-y-6">
         <div className="space-y-2">
-          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Size_Guide</label>
+          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Size Guide</label>
           <textarea value={policies.sizeGuide} onChange={e => setPolicies({...policies, sizeGuide: e.target.value})} className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none min-h-[100px] text-xs" />
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Shipping_Policy</label>
+          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Shipping Policy</label>
           <textarea value={policies.shipping} onChange={e => setPolicies({...policies, shipping: e.target.value})} className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none min-h-[100px] text-xs" />
         </div>
         <div className="space-y-2">
-          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Returns_Policy</label>
+          <label className="text-[10px] font-tech text-white/30 uppercase tracking-widest">Returns Policy</label>
           <textarea value={policies.returns} onChange={e => setPolicies({...policies, returns: e.target.value})} className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none min-h-[100px] text-xs" />
         </div>
         <button disabled={saving} onClick={handleSave} className="w-full bg-accent text-black py-4 font-black uppercase tracking-widest flex items-center justify-center gap-4">
-          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SAVE_POLICIES
+          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SAVE POLICIES
         </button>
       </div>
     </motion.div>
@@ -942,7 +942,7 @@ export function PaymentManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">FINANCE_CORE</h2></header>
+      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">FINANCE CORE</h2></header>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl">
         <div className="space-y-4">
           <Input label="PayPal Email" value={payments.paypalEmail} onChange={v => setPayments({...payments, paypalEmail: v})} />
@@ -955,7 +955,7 @@ export function PaymentManager() {
           <Input label="Webhook Hash" value={payments.flutterwaveWebhookHash} onChange={v => setPayments({...payments, flutterwaveWebhookHash: v})} />
         </div>
         <button disabled={saving} onClick={handleSave} className="md:col-span-2 w-full bg-accent text-black py-4 font-black uppercase tracking-widest flex items-center justify-center gap-4">
-          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SECURE_FINANCE
+          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SECURE FINANCE
         </button>
       </div>
     </motion.div>
@@ -999,7 +999,7 @@ function AssetPicker({ onSelect, onClose, excludeUrls = [] }: { onSelect: (url: 
       <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
       <div className="relative w-full max-w-5xl bg-surface border border-white/10 rounded-2xl flex flex-col max-h-[80vh] overflow-hidden">
         <header className="p-6 border-b border-white/5 flex justify-between items-center">
-          <h3 className="text-xl font-black italic uppercase">ASSET_LIBRARY</h3>
+          <h3 className="text-xl font-black italic uppercase">ASSET LIBRARY</h3>
           <button onClick={onClose}><X size={20} /></button>
         </header>
         <div className="p-6"><input placeholder="SEARCH..." value={search} onChange={e => setSearch(e.target.value)} className="w-full bg-black border border-white/10 p-4 font-tech text-xs text-accent outline-none" /></div>
@@ -1028,11 +1028,11 @@ function LoginView({ user, adminStatus, onLogin }: any) {
   return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center p-8 text-center">
       <Lock className="text-accent mb-8" size={64} />
-      <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-4 text-white">ACCESS_DENIED</h1>
-      <button onClick={onLogin} className="bg-accent text-black px-12 py-4 font-black uppercase text-sm tracking-[0.3em] flex items-center gap-4">INITIATE_AUTH <ChevronRight size={18} /></button>
+      <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-4 text-white">ACCESS DENIED</h1>
+      <button onClick={onLogin} className="bg-accent text-black px-12 py-4 font-black uppercase text-sm tracking-[0.3em] flex items-center gap-4">INITIATE AUTH <ChevronRight size={18} /></button>
       {user && !adminStatus && user.email === 'fffg3839@gmail.com' && (
         <button disabled={bootstrapping} onClick={handleBootstrap} className="mt-8 text-[10px] font-black uppercase text-accent underline flex items-center gap-2">
-          {bootstrapping ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />} BOOTSTRAP_ADMIN
+          {bootstrapping ? <Loader2 size={12} className="animate-spin" /> : <Database size={12} />} BOOTSTRAP ADMIN
         </button>
       )}
     </div>

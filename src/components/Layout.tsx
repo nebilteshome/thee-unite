@@ -233,10 +233,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="p-8 border-b border-white/10 flex items-center justify-between bg-black/50 backdrop-blur-md sticky top-0 z-10">
                 <div>
                   <h3 className="font-tech text-[10px] tracking-[0.3em] uppercase text-accent mb-1 underline underline-offset-4 decoration-accent/30">
-                    {isCheckoutMode ? 'Fulfillment_Data' : 'Your Frequency'}
+                    {isCheckoutMode ? 'Fulfillment Data' : 'Your Frequency'}
                   </h3>
                   <p className="text-2xl font-black italic uppercase tracking-tighter">
-                    {isCheckoutMode ? 'Shipping_Info' : 'Shopping Bag'}
+                    {isCheckoutMode ? 'Shipping Info' : 'Shopping Bag'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -262,27 +262,27 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {isCheckoutMode ? (
                   <form className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div className="space-y-2">
-                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Full_Name</label>
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Full Name</label>
                       <input 
                         type="text" 
                         value={shippingDetails.fullName}
                         onChange={e => setShippingDetails({...shippingDetails, fullName: e.target.value})}
                         className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
-                        placeholder="ENTER_NAME..."
+                        placeholder="ENTER NAME..."
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Email_Address</label>
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Email Address</label>
                       <input 
                         type="email" 
                         value={shippingDetails.email}
                         onChange={e => setShippingDetails({...shippingDetails, email: e.target.value})}
                         className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
-                        placeholder="ENTER_EMAIL..."
+                        placeholder="ENTER EMAIL..."
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Contact_Phone</label>
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Contact Phone</label>
                       <input 
                         type="tel" 
                         value={shippingDetails.phone}
@@ -292,7 +292,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Manifestation_Address</label>
+                      <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">Manifestation Address</label>
                       <textarea 
                         value={shippingDetails.address}
                         onChange={e => setShippingDetails({...shippingDetails, address: e.target.value})}
@@ -390,7 +390,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 <div className="p-8 bg-black border-t border-white/10 space-y-6">
                   <div className="flex justify-between items-end">
                     <span className="font-tech text-[10px] tracking-[0.4em] uppercase text-white/40 italic flex items-center gap-4">
-                      Subtotal_manifest <div className="h-px w-8 bg-white/10" />
+                      Subtotal manifest <div className="h-px w-8 bg-white/10" />
                     </span>
                     <span className="text-3xl font-black italic tracking-tighter">${subtotal}</span>
                   </div>
@@ -405,9 +405,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       </>
                     ) : (
                       isCheckoutMode ? (
-                        <>FINALIZE_MANIFEST <ArrowUpRight size={18} /></>
+                        <>FINALIZE MANIFEST <ArrowUpRight size={18} /></>
                       ) : (
-                        <>INITIATE_FULFILLMENT <ArrowUpRight size={18} /></>
+                        <>INITIATE FULFILLMENT <ArrowUpRight size={18} /></>
                       )
                     )}
                   </button>
@@ -455,18 +455,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-black pt-40 pb-12 px-8 border-t border-white/10 relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-20 mb-32">
+      <footer className="bg-black pt-16 pb-12 px-8 border-t border-white/10 relative">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
           <div className="md:col-span-2">
-            <h3 className="text-7xl font-display text-accent mb-8 leading-none uppercase">UNITE</h3>
-            <p className="text-white/40 max-w-sm font-light italic text-lg leading-relaxed mb-12">
+            <h3 className="text-7xl font-display text-accent mb-4 leading-none uppercase">UNITE</h3>
+            <p className="text-white/40 max-w-sm font-light italic text-lg leading-relaxed mb-8">
               The Greater Domain. Authentic Streetwear. We are the architects of the manifested dream.
             </p>
           </div>
           
           <div>
-            <h4 className="font-tech text-xs tracking-[0.4em] uppercase text-accent mb-8 font-black underline underline-offset-8">MANIFEST</h4>
-            <div className="flex flex-col gap-6 font-black text-sm uppercase tracking-widest italic">
+            <h4 className="font-tech text-xs tracking-[0.4em] uppercase text-accent mb-4 font-black underline underline-offset-8">MANIFEST</h4>
+            <div className="flex flex-col gap-4 font-black text-sm uppercase tracking-widest italic">
               {footerLinks.map(link => (
                 <Link key={link.path} to={link.path} className="hover:text-accent transition-colors flex items-center justify-between group">
                   {link.name} <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -481,7 +481,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               <div className="flex border-b border-white/20 pb-4 group focus-within:border-accent transition-colors">
                 <input 
                   type="email" 
-                  placeholder="FREQUENCY_ACCESS" 
+                  placeholder="FREQUENCY ACCESS" 
                   className="bg-transparent border-none outline-none text-[10px] font-black tracking-[0.4em] w-full placeholder:text-white/10 text-accent uppercase"
                 />
                 <button className="text-accent hover:scale-125 transition-transform"><ArrowUpRight size={20} /></button>
@@ -493,7 +493,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-8 pt-8 border-t border-white/10">
           <div className="text-[10px] uppercase tracking-[0.6em] text-white/20 font-black">
-            Thee Unite &copy; SERIES_01 / Manifested 2024
+            Thee Unite &copy; SERIES 01 / Manifested 2024
           </div>
           <div className="flex gap-6 items-center">
             <div className="flex gap-3">
