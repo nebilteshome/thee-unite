@@ -411,29 +411,33 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </AnimatePresence>
 
       {/* Mobile Menu */}
-      <motion.div 
-        initial={false}
-        animate={isOpen ? { opacity: 1, y: 0 } : { opacity: 0, y: -20 }}
-        style={{ pointerEvents: isOpen ? 'auto' : 'none' }}
-        className="fixed inset-0 z-40 bg-black pt-24 px-8 flex flex-col gap-8 md:hidden"
-      >
-        <div className="flex flex-col gap-4 text-6xl font-black uppercase tracking-tight">
-          <Link to="/" onClick={() => setIsOpen(false)}>Home</Link>
-          {mainLinks.map((link) => (
-            <Link 
-              key={link.path} 
-              to={link.path} 
-              onClick={() => setIsOpen(false)}
-              className={location.pathname === link.path ? 'text-accent' : ''}
-            >
-              {link.name}
-            </Link>
-          ))}
-          <a href="https://instagram.com/thee_unite" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-accent italic">
-            Instagram <ArrowUpRight size={32} />
-          </a>
-        </div>
-      </motion.div>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-[100px] left-0 w-full z-40 bg-black/95 backdrop-blur-md border-b border-white/10 px-8 py-12 md:hidden"
+          >
+            <div className="flex flex-col gap-6 text-4xl font-black uppercase tracking-tight">
+              <Link to="/" onClick={() => setIsOpen(false)}>Home</Link>
+              {mainLinks.map((link) => (
+                <Link 
+                  key={link.path} 
+                  to={link.path} 
+                  onClick={() => setIsOpen(false)}
+                  className={location.pathname === link.path ? 'text-accent' : ''}
+                >
+                  {link.name}
+                </Link>
+              ))}
+              <a href="https://instagram.com/thee_unite" target="_blank" rel="noreferrer" className="flex items-center gap-2 text-accent italic text-2xl">
+                Instagram <ArrowUpRight size={24} />
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <main className="min-h-[calc(100vh-100px)]">
         {children}

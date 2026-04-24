@@ -26,7 +26,8 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
   if (!product) return null;
 
   // Use same logic as Collection.tsx for image source
-  const imageSrc = product.images?.[0] || product.image || '';
+  const firstImage = product.images?.[0] || product.image || '';
+  const secondImage = product.images?.[1];
   const videoSrc = product.video;
 
   return (
@@ -38,21 +39,33 @@ const RunwayItem: React.FC<RunwayItemProps> = ({ product, onAddToCart }) => {
       style={{ willChange: 'transform' }}
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-neutral-900 border border-white/5 shadow-lg rounded-lg">
+        {/* First Image */}
         <img 
-          src={imageSrc} 
+          src={firstImage} 
           alt={product.name}
           loading="lazy"
-          className={`w-full h-full object-cover transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${isHovered && (secondImage || videoSrc) ? 'opacity-0' : 'opacity-100'}`}
           onError={(e) => {
-            console.error(`Failed to load image for ${product.name}:`, imageSrc);
-            (e.target as HTMLImageElement).src = '/images/placeholder.jpg'; // Fallback to a placeholder if you have one
+            console.error(`Failed to load image for ${product.name}:`, firstImage);
+            (e.target as HTMLImageElement).src = '/images/placeholder.jpg';
           }}
         />
+
+        {/* Second Image on Hover */}
+        {secondImage && (
+          <img 
+            src={secondImage} 
+            alt={`${product.name} hover`}
+            loading="lazy"
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 ${isHovered ? 'opacity-100' : 'opacity-0'}`}
+          />
+        )}
         
-        {videoSrc && (
+        {/* Video on Hover (only if no second image) */}
+        {!secondImage && videoSrc && (
           <HoverVideo 
             src={videoSrc} 
-            poster={imageSrc} 
+            poster={firstImage} 
             isHovered={isHovered} 
           />
         )}

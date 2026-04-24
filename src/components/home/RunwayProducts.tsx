@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { fetchProducts, Product } from '../../data/products';
 import RunwayItem from './RunwayItem';
 import FloatingCart from './FloatingCart';
-import CheckoutModal from './CheckoutModal';
 import { cartStore } from '../../lib/cart';
 import gsap from 'gsap';
 import { Loader2 } from 'lucide-react';
@@ -11,8 +10,6 @@ const RunwayProducts: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [cartCount, setCartCount] = useState(cartStore.items.length);
-  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -59,8 +56,8 @@ const RunwayProducts: React.FC = () => {
       color: 'DEFAULT',
       quantity: 1
     });
-    setSelectedProduct(product);
-    setIsCheckoutOpen(true);
+    // Visual feedback could be added here if desired, 
+    // but the request is just to add to cart without opening anything.
   };
 
   const handleOpenCart = () => {
@@ -100,16 +97,6 @@ const RunwayProducts: React.FC = () => {
       )}
 
       <FloatingCart itemCount={cartCount} onClick={handleOpenCart} />
-      
-      <CheckoutModal 
-        isOpen={isCheckoutOpen} 
-        onClose={() => setIsCheckoutOpen(false)}
-        product={selectedProduct}
-        onFinalize={() => {
-          setIsCheckoutOpen(false);
-          cartStore.setIsOpen(true);
-        }}
-      />
     </div>
   );
 };
