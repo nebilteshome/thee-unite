@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, ArrowLeft, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { db } from '../lib/firebase';
-import { doc, getDoc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
-import { useSearchParams, Link } from 'react-router-dom';
+import { doc, getDoc, collection, getDocs, limit, query } from 'firebase/firestore';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { cartStore } from '../lib/cart';
 
 interface Product {
@@ -22,6 +22,7 @@ interface Product {
 export default function Shop() {
   const [searchParams] = useSearchParams();
   const productId = searchParams.get('id');
+  const navigate = useNavigate();
   
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -95,10 +96,19 @@ export default function Shop() {
   const images = product.images?.length ? product.images : [product.image || ''];
 
   return (
-    <section className="py-20 px-6 max-w-7xl mx-auto min-h-screen">
-      <Link to="/collection" className="inline-flex items-center gap-2 text-[10px] font-tech text-white/40 hover:text-accent uppercase tracking-widest mb-12 transition-colors">
-        <ArrowLeft size={14} /> Back_To_Collection
-      </Link>
+    <section className="py-20 px-6 max-w-7xl mx-auto min-h-screen relative">
+      <div className="flex justify-between items-center mb-12">
+        <Link to="/collection" className="inline-flex items-center gap-2 text-[10px] font-tech text-white/40 hover:text-accent uppercase tracking-widest transition-colors">
+          <ArrowLeft size={14} /> Back_To_Collection
+        </Link>
+        
+        <button 
+          onClick={() => navigate(-1)}
+          className="flex items-center gap-2 text-[10px] font-tech text-accent hover:text-white uppercase tracking-[0.3em] transition-colors group"
+        >
+          Dismiss <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
+        </button>
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-20">
         {/* Product Images */}

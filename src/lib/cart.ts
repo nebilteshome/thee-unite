@@ -48,7 +48,7 @@ export const cartStore = {
     this.notify();
   },
 
-  addItem(item: CartItem, openCart: boolean = true) {
+  addItem(item: CartItem, openCart: boolean = false) {
     const existingIndex = cartItems.findIndex(i => i.id === item.id);
     if (existingIndex > -1) {
       cartItems[existingIndex].quantity += 1;
