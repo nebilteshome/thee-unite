@@ -6,13 +6,29 @@ import { cartStore } from '../../lib/cart';
 import gsap from 'gsap';
 import { Loader2 } from 'lucide-react';
 
-const RunwayProducts: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+interface RunwayProductsProps {
+  products?: Product[];
+  loading?: boolean;
+  showCart?: boolean;
+}
+
+const RunwayProducts: React.FC<RunwayProductsProps> = ({ 
+  products: initialProducts, 
+  loading: initialLoading = false,
+  showCart = true 
+}) => {
+  const [products, setProducts] = useState<Product[]>(initialProducts || []);
+  const [loading, setLoading] = useState(initialLoading && !initialProducts);
   const [cartCount, setCartCount] = useState(cartStore.items.length);
   const rowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (initialProducts) {
+      setProducts(initialProducts);
+      setLoading(false);
+      return;
+    }
+
     const loadProducts = async () => {
       setLoading(true);
       const data = await fetchProducts();
@@ -20,7 +36,9 @@ const RunwayProducts: React.FC = () => {
       setLoading(false);
     };
     loadProducts();
+  }, [initialProducts]);
 
+  useEffect(() => {
     const unsubscribe = cartStore.subscribe(() => {
       setCartCount(cartStore.items.reduce((acc, item) => acc + item.quantity, 0));
     });
@@ -94,7 +112,7 @@ const RunwayProducts: React.FC = () => {
         </div>
       )}
 
-      <FloatingCart itemCount={cartCount} onClick={handleOpenCart} />
+      {showCart && <FloatingCart itemCount={cartCount} onClick={handleOpenCart} />}
     </div>
   );
 };
