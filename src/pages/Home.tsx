@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { fetchProducts, Product } from '../data/products';
+import { Loader2 } from 'lucide-react';
 
 interface HeroSettings {
   title: string;
@@ -12,6 +14,49 @@ interface HeroSettings {
   bgUrl: string;
   bgType: 'image' | 'video';
 }
+
+const CategoryHero = ({ category, product }: { category: string, product?: Product }) => {
+  const bgUrl = product?.video || product?.image || '/hero-video.mp4';
+  const isVideo = !!product?.video || bgUrl.endsWith('.mp4');
+
+  return (
+    <section className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
+      <div className="absolute inset-0 w-full h-full">
+        {isVideo ? (
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover brightness-[0.5]"
+            src={bgUrl}
+          />
+        ) : (
+          <img
+            src={bgUrl}
+            className="w-full h-full object-cover brightness-[0.5]"
+            alt={category}
+          />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
+      </div>
+      
+      <div className="relative z-10 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          viewport={{ once: true }}
+        >
+          <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-4 block italic">CATEGORY_VOYAGE</span>
+          <h2 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter text-white">
+            {category}
+          </h2>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 const CharacterReveal = ({ text, className, delay = 0 }: { text: string, className?: string, delay?: number }) => {
   const characters = text.split("");
@@ -136,6 +181,19 @@ export default function Home() {
   const [activeHero, setActiveHero] = useState<HeroSettings | null>(null);
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+  // Load products
+  useEffect(() => {
+    const loadData = async () => {
+      setLoadingProducts(true);
+      const data = await fetchProducts();
+      setProducts(data);
+      setLoadingProducts(false);
+    };
+    loadData();
+  }, []);
 
   // Live updates from Firestore with smooth transitions
   useEffect(() => {
@@ -189,6 +247,8 @@ export default function Home() {
       }
     });
   };
+
+  const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
 
   return (
     <div className="bg-black">
@@ -304,7 +364,39 @@ export default function Home() {
       </section>
       
       <div className="relative z-30 bg-black">
-        <RunwayProducts />
+        {loadingProducts ? (
+          <div className="py-20 flex flex-col items-center justify-center text-accent font-tech">
+            <Loader2 className="animate-spin mb-4" size={24} />
+            <p className="text-[10px] tracking-[0.5em] uppercase">LOADING_COLLECTIONS...</p>
+          </div>
+        ) : (
+          categories.map((category, index) => {
+            const categoryProducts = products.filter(p => p.category === category);
+            return (
+              <React.Fragment key={category}>
+                <CategoryHero 
+                  category={category} 
+                  product={categoryProducts[0]} 
+                />
+                <div className="py-12">
+                  <div className="px-8 mb-8 flex items-end justify-between">
+                    <div>
+                      <span className="text-accent font-tech text-[10px] tracking-[0.3em] uppercase">EXPLORE_SERIES</span>
+                      <h3 className="text-4xl font-black uppercase italic tracking-tighter">{category}</h3>
+                    </div>
+                    <Link to="/shop" className="text-[10px] font-tech uppercase tracking-widest text-white/40 hover:text-accent transition-colors">
+                      View All →
+                    </Link>
+                  </div>
+                  <RunwayProducts 
+                    products={categoryProducts} 
+                    showCart={index === categories.length - 1} 
+                  />
+                </div>
+              </React.Fragment>
+            );
+          })
+        )}
       </div>
     </div>
   );
