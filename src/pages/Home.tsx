@@ -3,9 +3,25 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDocs, query, orderBy } from 'firebase/firestore';
 import { fetchProducts, Product } from '../data/products';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronRight } from 'lucide-react';
+
+interface HeroSection {
+  id: string;
+  category: string;
+  title: string;
+  subtitle?: string;
+  backgroundType: 'image' | 'video';
+  backgroundUrl: string;
+  textColor: string;
+  fontSize: string;
+  fontWeight: string;
+  textAlign: 'left' | 'center' | 'right';
+  fontFamily: string;
+  order: number;
+  createdAt: string;
+}
 
 interface HeroSettings {
   title: string;
@@ -14,49 +30,6 @@ interface HeroSettings {
   bgUrl: string;
   bgType: 'image' | 'video';
 }
-
-const CategoryHero = ({ category, product }: { category: string, product?: Product }) => {
-  const bgUrl = product?.video || product?.image || '/hero-video.mp4';
-  const isVideo = !!product?.video || bgUrl.endsWith('.mp4');
-
-  return (
-    <section className="relative h-[60vh] md:h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
-      <div className="absolute inset-0 w-full h-full">
-        {isVideo ? (
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover brightness-[0.5]"
-            src={bgUrl}
-          />
-        ) : (
-          <img
-            src={bgUrl}
-            className="w-full h-full object-cover brightness-[0.5]"
-            alt={category}
-          />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
-      </div>
-      
-      <div className="relative z-10 text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, ease: "easeOut" }}
-          viewport={{ once: true }}
-        >
-          <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-4 block italic">CATEGORY_VOYAGE</span>
-          <h2 className="text-6xl md:text-9xl font-black uppercase italic tracking-tighter text-white">
-            {category}
-          </h2>
-        </motion.div>
-      </div>
-    </section>
-  );
-};
 
 const CharacterReveal = ({ text, className, delay = 0 }: { text: string, className?: string, delay?: number }) => {
   const characters = text.split("");
@@ -171,7 +144,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
 };
 
 export default function Home() {
-  const [hero, setHero] = useState<HeroSettings>({
+  const [mainHero, setMainHero] = useState<HeroSettings>({
     title: 'THEE UNITE',
     tagline: 'EST 2024',
     subtitle: 'FOR EVERY SOUL THAT DARES TO DREAM',
@@ -181,49 +154,50 @@ export default function Home() {
   const [activeHero, setActiveHero] = useState<HeroSettings | null>(null);
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  
   const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [categoryHeros, setCategoryHeros] = useState<HeroSection[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Load products
   useEffect(() => {
     const loadData = async () => {
-      setLoadingProducts(true);
-      const data = await fetchProducts();
-      setProducts(data);
-      setLoadingProducts(false);
+      setLoading(true);
+      const [prodData, heroSnap] = await Promise.all([
+        fetchProducts(),
+        getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')))
+      ]);
+      
+      const heros = heroSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
+      setProducts(prodData);
+      setCategoryHeros(heros);
+      setLoading(false);
     };
     loadData();
   }, []);
 
-  // Live updates from Firestore with smooth transitions
+  // Live updates for main hero
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'hero'), (snap) => {
       if (snap.exists()) {
         const newData = snap.data() as HeroSettings;
-        
-        // Initial load
         if (!activeHero) {
           preloadAsset(newData).then(() => {
-            setHero(newData);
+            setMainHero(newData);
             setActiveHero(newData);
           });
           return;
         }
-
-        // If background changed, handle transition
         if (newData.bgUrl !== activeHero.bgUrl || newData.bgType !== activeHero.bgType) {
           preloadAsset(newData).then(() => {
-            setHero(newData);
+            setMainHero(newData);
             setIsTransitioning(true);
-            // Duration should match transition in motion.div below
             setTimeout(() => {
               setActiveHero(newData);
               setIsTransitioning(false);
-            }, 1000); 
+            }, 1000);
           });
         } else {
-          // If only metadata (title, tagline, etc.) changed
-          setHero(newData);
+          setMainHero(newData);
           setActiveHero(newData);
         }
       }
@@ -238,7 +212,7 @@ export default function Home() {
         video.src = settings.bgUrl;
         video.preload = 'auto';
         video.oncanplaythrough = () => resolve();
-        video.onerror = () => resolve(); // Avoid getting stuck
+        video.onerror = () => resolve();
       } else {
         const img = new Image();
         img.src = settings.bgUrl;
@@ -248,12 +222,10 @@ export default function Home() {
     });
   };
 
-  const categories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
-
   return (
     <div className="bg-black">
+      {/* Main Hero Section */}
       <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
-        {/* Triple-layer Double Buffer Background Container */}
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           <AnimatePresence mode="popLayout">
             {activeHero && (
@@ -267,46 +239,37 @@ export default function Home() {
               >
                 {activeHero.bgType === 'video' ? (
                   <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7] opacity-100"
+                    autoPlay loop muted playsInline preload="auto"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7]"
                     src={activeHero.bgUrl}
                   />
                 ) : (
                   <img 
                     src={activeHero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8] opacity-100"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
                   />
                 )}
               </motion.div>
             )}
 
-            {/* Next Layer Buffer (Preparing to swap) */}
-            {isTransitioning && hero.bgUrl !== activeHero?.bgUrl && (
+            {isTransitioning && mainHero.bgUrl !== activeHero?.bgUrl && (
               <motion.div
-                key={hero.bgUrl + hero.bgType + "_preloading"}
+                key={mainHero.bgUrl + mainHero.bgType + "_preloading"}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
                 className="absolute inset-0 w-full h-full z-10"
               >
-                {hero.bgType === 'video' ? (
+                {mainHero.bgType === 'video' ? (
                   <video
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7] opacity-100"
-                    src={hero.bgUrl}
+                    autoPlay loop muted playsInline preload="auto"
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7]"
+                    src={mainHero.bgUrl}
                   />
                 ) : (
                   <img 
-                    src={hero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8] opacity-100"
+                    src={mainHero.bgUrl}
+                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
                   />
                 )}
               </motion.div>
@@ -315,7 +278,6 @@ export default function Home() {
           <div className="absolute inset-0 bg-black/30 z-20" />
         </div>
 
-        {/* Content Overlay */}
         <div className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-32">
           <div className="max-w-4xl mx-auto w-full">
             <motion.p
@@ -324,11 +286,11 @@ export default function Home() {
               transition={{ delay: 0.3, duration: 0.8 }}
               className="font-tech text-xs tracking-[0.4em] uppercase text-white mb-4"
             >
-              {hero.tagline}
+              {mainHero.tagline}
             </motion.p>
 
             <div className="mb-8">
-              <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
+              <TheeUniteReveal title={mainHero.title} onComplete={() => setVideoCanPlay(true)} />
             </div>
 
             <motion.div
@@ -337,21 +299,10 @@ export default function Home() {
               transition={{ delay: 0.7, duration: 0.8 }}
               className="flex flex-row items-center justify-center gap-4"
             >
-              <Link 
-                to="/shop"
-                className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors"
-              >
-                Shop Now
-              </Link>
-              <Link 
-                to="/collection"
-                className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors"
-              >
-                The Story
-              </Link>
+              <Link to="/shop" className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors">Shop Now</Link>
+              <Link to="/collection" className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors">The Story</Link>
             </motion.div>
           </div>
-
           <motion.div
             initial={{ opacity: 0 }}
             animate={videoCanPlay ? { opacity: 1 } : { opacity: 0 }}
@@ -363,34 +314,86 @@ export default function Home() {
         </div>
       </section>
       
+      {/* Category Sections */}
       <div className="relative z-30 bg-black">
-        {loadingProducts ? (
+        {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-accent font-tech">
             <Loader2 className="animate-spin mb-4" size={24} />
-            <p className="text-[10px] tracking-[0.5em] uppercase">LOADING_COLLECTIONS...</p>
+            <p className="text-[10px] tracking-[0.5em] uppercase">SYNCHRONIZING_EXPERIENCE...</p>
           </div>
         ) : (
-          categories.map((category, index) => {
-            const categoryProducts = products.filter(p => p.category === category);
+          categoryHeros.map((hero, index) => {
+            const categoryProducts = products.filter(p => p.category === hero.category);
+            if (categoryProducts.length === 0) return null;
+
             return (
-              <React.Fragment key={category}>
-                <CategoryHero 
-                  category={category} 
-                  product={categoryProducts[0]} 
-                />
-                <div className="py-12">
-                  <div className="px-8 mb-8 flex items-end justify-between">
+              <React.Fragment key={hero.id}>
+                {/* Dynamic Category Hero */}
+                <section className="relative h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
+                  <div className="absolute inset-0 w-full h-full">
+                    {hero.backgroundType === 'video' ? (
+                      <video
+                        autoPlay loop muted playsInline
+                        className="w-full h-full object-cover brightness-[0.5]"
+                        src={hero.backgroundUrl}
+                      />
+                    ) : (
+                      <img
+                        src={hero.backgroundUrl}
+                        className="w-full h-full object-cover brightness-[0.5]"
+                        alt={hero.category}
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
+                  </div>
+                  
+                  <div 
+                    className="relative z-10 px-6 w-full max-w-7xl mx-auto"
+                    style={{ textAlign: hero.textAlign }}
+                  >
+                    <motion.div
+                      initial={{ opacity: 0, y: 30 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                      viewport={{ once: true }}
+                    >
+                      <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-6 block italic opacity-70">
+                        {hero.category}_SERIES
+                      </span>
+                      <h2 
+                        className="uppercase italic tracking-tighter leading-[0.85]"
+                        style={{ 
+                          color: hero.textColor,
+                          fontSize: hero.fontSize,
+                          fontWeight: hero.fontWeight,
+                          fontFamily: hero.fontFamily
+                        }}
+                      >
+                        {hero.title}
+                      </h2>
+                      {hero.subtitle && (
+                        <p className="mt-8 font-tech text-sm tracking-[0.2em] uppercase opacity-40 max-w-xl inline-block">
+                          {hero.subtitle}
+                        </p>
+                      )}
+                    </motion.div>
+                  </div>
+                </section>
+
+                {/* Category Products */}
+                <div className="py-24">
+                  <div className="px-8 mb-12 flex items-end justify-between">
                     <div>
-                      <span className="text-accent font-tech text-[10px] tracking-[0.3em] uppercase">EXPLORE_SERIES</span>
-                      <h3 className="text-4xl font-black uppercase italic tracking-tighter">{category}</h3>
+                      <span className="text-accent font-tech text-[10px] tracking-[0.4em] uppercase mb-2 block">CATALOG_SCAN</span>
+                      <h3 className="text-5xl font-black uppercase italic tracking-tighter">{hero.category}</h3>
                     </div>
-                    <Link to="/shop" className="text-[10px] font-tech uppercase tracking-widest text-white/40 hover:text-accent transition-colors">
-                      View All →
+                    <Link to="/shop" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-accent transition-colors flex items-center gap-4">
+                      VIEW FULL COLLECTION <ChevronRight size={14} />
                     </Link>
                   </div>
                   <RunwayProducts 
                     products={categoryProducts} 
-                    showCart={index === categories.length - 1} 
+                    showCart={index === categoryHeros.length - 1} 
                   />
                 </div>
               </React.Fragment>

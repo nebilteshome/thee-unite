@@ -39,6 +39,22 @@ interface GalleryItem {
   order: number;
 }
 
+interface HeroSection {
+  id: string;
+  category: string;
+  title: string;
+  subtitle?: string;
+  backgroundType: 'image' | 'video';
+  backgroundUrl: string;
+  textColor: string;
+  fontSize: string;
+  fontWeight: string;
+  textAlign: 'left' | 'center' | 'right';
+  fontFamily: string;
+  order: number;
+  createdAt: string;
+}
+
 interface HeroSettings {
   title: string;
   tagline: string;
@@ -778,99 +794,291 @@ export function GalleryManager() {
 }
 
 export function HeroManager() {
-  const [hero, setHero] = useState<HeroSettings>({ title: '', tagline: '', subtitle: '', bgUrl: '', bgType: 'video' });
-  const [activeBg, setActiveBg] = useState<{url: string, type: string} | null>(null);
-  const [isPreloading, setIsPreloading] = useState(false);
+  const [heros, setHeros] = useState<HeroSection[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [editingHero, setEditingHero] = useState<Partial<HeroSection> | null>(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [activePreview, setActivePreview] = useState<Partial<HeroSection> | null>(null);
 
   useEffect(() => {
-    const fetchHero = async () => {
-      const snap = await getDoc(doc(db, 'settings', 'hero'));
-      if (snap.exists()) {
-        const data = snap.data() as HeroSettings;
-        setHero(data);
-        setActiveBg({ url: data.bgUrl, type: data.bgType });
+    const fetchData = async () => {
+      setLoading(true);
+      // Fetch Products to get categories
+      const prodSnap = await getDocs(collection(db, 'products'));
+      const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
+      setCategories(uniqueCats);
+
+      // Fetch existing heros
+      const heroSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
+      const heroList = heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection));
+      setHeros(heroList);
+      setLoading(false);
+
+      // Auto-create missing heros for categories
+      const missingCats = uniqueCats.filter(cat => !heroList.find(h => h.category === cat));
+      if (missingCats.length > 0) {
+        const batch = writeBatch(db);
+        missingCats.forEach(cat => {
+          const docRef = doc(collection(db, 'heros'));
+          batch.set(docRef, {
+            category: cat,
+            title: cat,
+            subtitle: 'EXPLORE THE COLLECTION',
+            backgroundType: 'video',
+            backgroundUrl: '/hero-video.mp4',
+            textColor: '#ffffff',
+            fontSize: '120px',
+            fontWeight: '900',
+            textAlign: 'center',
+            fontFamily: 'Anton',
+            order: heroList.length + 1,
+            createdAt: new Date().toISOString()
+          });
+        });
+        await batch.commit();
+        // Re-fetch
+        const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
+        setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
       }
     };
-    fetchHero();
+    fetchData();
   }, []);
 
-  // Handle preview preloading for smooth switching
-  useEffect(() => {
-    if (hero.bgUrl && activeBg && hero.bgUrl !== activeBg.url) {
-      setIsPreloading(true);
-      const preload = async () => {
-        if (hero.bgType === 'video') {
-          const video = document.createElement('video');
-          video.src = hero.bgUrl;
-          video.preload = 'auto';
-          video.oncanplaythrough = () => {
-            setActiveBg({ url: hero.bgUrl, type: hero.bgType });
-            setIsPreloading(false);
-          };
-        } else {
-          const img = new Image();
-          img.src = hero.bgUrl;
-          img.onload = () => {
-            setActiveBg({ url: hero.bgUrl, type: hero.bgType });
-            setIsPreloading(false);
-          };
-        }
-      };
-      preload();
-    } else if (hero.bgUrl && !activeBg) {
-      setActiveBg({ url: hero.bgUrl, type: hero.bgType });
-    }
-  }, [hero.bgUrl, hero.bgType, activeBg]);
-
   const handleSave = async () => {
+    if (!editingHero) return;
     setSaving(true);
     try {
-      await setDoc(doc(db, 'settings', 'hero'), hero);
-      alert('Hero Synchronized');
+      if (editingHero.id) {
+        await updateDoc(doc(db, 'heros', editingHero.id), editingHero);
+      } else {
+        await addDoc(collection(db, 'heros'), {
+          ...editingHero,
+          createdAt: new Date().toISOString()
+        });
+      }
+      setEditingHero(null);
+      // Re-fetch
+      const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
+      setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
+      alert('Hero Manifest Synchronized');
     } finally { setSaving(false); }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm('Destroy this hero manifest?')) return;
+    await deleteDoc(doc(db, 'heros', id));
+    setHeros(heros.filter(h => h.id !== id));
+  };
+
+  if (loading) return <div className="py-20 text-center font-tech text-xs text-accent">RECONSTRUCTING_HERO_CORE...</div>;
+
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-      {showPicker && <AssetPicker onSelect={(url) => { setHero(h => ({ ...h, bgUrl: url, bgType: url.endsWith('.mp4') ? 'video' : 'image' })); setShowPicker(false); }} onClose={() => setShowPicker(false)} />}
-      <header className="mb-12"><h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO SYNC</h2></header>
-      <div className="max-w-2xl space-y-6">
-        <div className="aspect-video bg-surface border border-white/5 relative overflow-hidden flex items-center justify-center">
-          <AnimatePresence mode="popLayout">
-            {activeBg && (
-              <motion.div
-                key={activeBg.url}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.5 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 w-full h-full"
-              >
-                {activeBg.type === 'video' ? (
-                  <video src={activeBg.url} className="w-full h-full object-cover" autoPlay loop muted />
-                ) : (
-                  <img src={activeBg.url} className="w-full h-full object-cover" />
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          
-          {isPreloading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10 backdrop-blur-sm">
-              <Loader2 className="animate-spin text-accent" size={24} />
-            </div>
-          )}
-          
-          <button onClick={() => setShowPicker(true)} className="absolute z-20 bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase shadow-2xl">SELECT MEDIA</button>
-        </div>
-        <Input label="Title" value={hero.title} onChange={v => setHero({...hero, title: v})} />
-        <Input label="Tagline" value={hero.tagline} onChange={v => setHero({...hero, tagline: v})} />
-        <Input label="Subtitle" value={hero.subtitle} onChange={v => setHero({...hero, subtitle: v})} />
-        <button disabled={saving} onClick={handleSave} className="w-full bg-accent text-black py-4 font-black uppercase tracking-widest flex items-center justify-center gap-4">
-          {saving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />} SAVE HERO
+      {showPicker && (
+        <AssetPicker 
+          onSelect={(url) => { 
+            setEditingHero(h => h ? ({ 
+              ...h, 
+              backgroundUrl: url, 
+              backgroundType: url.endsWith('.mp4') ? 'video' : 'image' 
+            }) : null); 
+            setShowPicker(false); 
+          }} 
+          onClose={() => setShowPicker(false)} 
+        />
+      )}
+
+      <header className="flex justify-between items-end mb-12">
+        <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_CMS</h2>
+        <button 
+          onClick={() => setEditingHero({
+            category: categories[0] || 'GENERAL',
+            title: 'NEW HERO',
+            backgroundType: 'image',
+            backgroundUrl: '',
+            textColor: '#ffffff',
+            fontSize: '80px',
+            fontWeight: '700',
+            textAlign: 'center',
+            fontFamily: 'Inter',
+            order: heros.length + 1
+          })}
+          className="bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase"
+        >
+          NEW MANIFEST
         </button>
+      </header>
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
+        {/* Hero List */}
+        <div className="space-y-4">
+          <h3 className="text-xl font-black italic uppercase mb-8">ACTIVE_HEROS</h3>
+          {heros.map(h => (
+            <div key={h.id} className="bg-surface/20 border border-white/5 p-6 flex gap-6 group hover:border-accent/30 transition-all">
+              <div className="w-32 aspect-video bg-black border border-white/10 overflow-hidden shrink-0 relative">
+                {h.backgroundType === 'video' ? (
+                  <video src={h.backgroundUrl} className="w-full h-full object-cover" />
+                ) : (
+                  <img src={h.backgroundUrl} className="w-full h-full object-cover" />
+                )}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <span className="text-[8px] font-tech text-white/60">{h.category}</span>
+                </div>
+              </div>
+              <div className="flex-1">
+                <div className="flex justify-between items-start">
+                  <h4 className="font-black italic uppercase text-lg">{h.title}</h4>
+                  <div className="flex gap-2">
+                    <button onClick={() => setEditingHero(h)} className="p-2 text-white/20 hover:text-accent transition-colors"><Edit2 size={16} /></button>
+                    <button onClick={() => handleDelete(h.id)} className="p-2 text-white/20 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-4 text-[9px] font-tech text-white/40 uppercase">
+                  <span>ORDER: {h.order}</span>
+                  <span>STYLE: {h.fontFamily} / {h.fontSize}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Editor */}
+        <AnimatePresence>
+          {editingHero && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: 20 }}
+              className="bg-surface/30 border border-white/5 p-8 rounded-2xl h-fit sticky top-8"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-xl font-black italic uppercase">MANIFEST_EDITOR</h3>
+                <button onClick={() => setEditingHero(null)}><X size={20} /></button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Live Preview */}
+                <div className="relative aspect-video bg-black border border-white/10 overflow-hidden flex items-center justify-center">
+                  <div className="absolute inset-0">
+                    {editingHero.backgroundType === 'video' ? (
+                      <video src={editingHero.backgroundUrl} className="w-full h-full object-cover opacity-50" autoPlay loop muted />
+                    ) : (
+                      <img src={editingHero.backgroundUrl} className="w-full h-full object-cover opacity-50" />
+                    )}
+                  </div>
+                  <div 
+                    className="relative z-10 p-4 w-full"
+                    style={{
+                      color: editingHero.textColor,
+                      fontSize: `calc(${editingHero.fontSize} * 0.3)`,
+                      fontWeight: editingHero.fontWeight,
+                      textAlign: editingHero.textAlign,
+                      fontFamily: editingHero.fontFamily
+                    }}
+                  >
+                    <div className="uppercase leading-tight">{editingHero.title || 'PREVIEW_TITLE'}</div>
+                    <div className="text-[0.4em] mt-2 opacity-80">{editingHero.subtitle || 'SUBTITLE_PREVIEW'}</div>
+                  </div>
+                  <button onClick={() => setShowPicker(true)} className="absolute bottom-4 right-4 bg-accent text-black p-2 rounded-full shadow-xl">
+                    <Upload size={16} />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Category</label>
+                    <select 
+                      value={editingHero.category} 
+                      onChange={e => setEditingHero({...editingHero, category: e.target.value})}
+                      className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none"
+                    >
+                      {categories.map(cat => <option key={cat}>{cat}</option>)}
+                      <option>GENERAL</option>
+                    </select>
+                  </div>
+                  <Input label="Order (Lower = First)" type="number" value={editingHero.order?.toString() || '0'} onChange={v => setEditingHero({...editingHero, order: parseInt(v)})} />
+                </div>
+
+                <Input label="Title" value={editingHero.title || ''} onChange={v => setEditingHero({...editingHero, title: v})} />
+                <Input label="Subtitle" value={editingHero.subtitle || ''} onChange={v => setEditingHero({...editingHero, subtitle: v})} />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <Input label="Font Size (e.g. 120px)" value={editingHero.fontSize || ''} onChange={v => setEditingHero({...editingHero, fontSize: v})} />
+                  <div className="space-y-2">
+                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Text Color</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="color" 
+                        value={editingHero.textColor || '#ffffff'} 
+                        onChange={e => setEditingHero({...editingHero, textColor: e.target.value})}
+                        className="w-12 h-12 bg-black border border-white/10 p-1 cursor-pointer"
+                      />
+                      <input 
+                        type="text" 
+                        value={editingHero.textColor || '#ffffff'} 
+                        onChange={e => setEditingHero({...editingHero, textColor: e.target.value})}
+                        className="flex-1 bg-black border border-white/10 p-3 font-tech text-xs text-accent outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Weight</label>
+                    <select 
+                      value={editingHero.fontWeight} 
+                      onChange={e => setEditingHero({...editingHero, fontWeight: e.target.value})}
+                      className="w-full bg-black border border-white/10 p-3 font-black uppercase text-accent outline-none"
+                    >
+                      <option value="300">Light</option>
+                      <option value="400">Normal</option>
+                      <option value="700">Bold</option>
+                      <option value="900">Black</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Family</label>
+                    <select 
+                      value={editingHero.fontFamily} 
+                      onChange={e => setEditingHero({...editingHero, fontFamily: e.target.value})}
+                      className="w-full bg-black border border-white/10 p-3 font-black uppercase text-accent outline-none"
+                    >
+                      <option value="Inter">Inter</option>
+                      <option value="Anton">Anton</option>
+                      <option value="Space Grotesk">Space Grotesk</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Align</label>
+                    <div className="flex bg-black border border-white/10">
+                      {(['left', 'center', 'right'] as const).map(align => (
+                        <button 
+                          key={align}
+                          onClick={() => setEditingHero({...editingHero, textAlign: align})}
+                          className={`flex-1 p-3 text-[10px] font-black uppercase transition-colors ${editingHero.textAlign === align ? 'bg-accent text-black' : 'text-white/40'}`}
+                        >
+                          {align[0]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <button 
+                  disabled={saving}
+                  onClick={handleSave} 
+                  className="w-full bg-accent text-black py-4 font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                  SAVE_MANIFEST
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
