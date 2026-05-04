@@ -122,7 +122,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
             }}
             className="overflow-hidden whitespace-nowrap flex items-center"
           >
-            <span className="text-7xl sm:text-9xl md:text-[14vw] font-display uppercase tracking-tight italic leading-none pr-8 text-accent">
+            <span className="text-7xl sm:text-9xl md:text-[14vw] font-display font-medium uppercase tracking-tight italic leading-none pr-8 text-accent">
               UNITE
             </span>
           </motion.div>
@@ -136,7 +136,7 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], onComplete }}
-      className="text-6xl sm:text-8xl md:text-[12vw] font-display uppercase tracking-tight italic leading-none"
+      className="text-6xl sm:text-8xl md:text-[12vw] font-display font-medium uppercase tracking-tight italic leading-none"
     >
       {title}
     </motion.h1>

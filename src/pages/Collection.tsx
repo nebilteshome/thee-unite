@@ -45,7 +45,7 @@ export default function Collection() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2">
         {products.length === 0 ? (
           <div className="col-span-full py-20 text-center border border-dashed border-white/10 text-white/20 font-tech text-xs uppercase">
             No products detected in core repository
@@ -68,15 +68,15 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <Link 
       to={`/shop?id=${product.id}`} 
-      className="group cursor-pointer"
+      className="group cursor-pointer block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="relative aspect-[3/4] overflow-hidden bg-surface border border-white/5 mb-6 accent-glow">
+      <div className="relative aspect-square overflow-hidden bg-surface border border-white/5 mb-1 transition-transform duration-300 group-hover:scale-[1.03] ease-out">
         <img 
           src={imageSrc} 
           loading="lazy"
-          className={`w-full h-full object-cover transition-all duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`} 
+          className={`w-full h-full object-cover transition-opacity duration-700 ${isHovered && videoSrc ? 'opacity-0' : 'opacity-100'}`} 
           referrerPolicy="no-referrer" 
           onError={(e) => {
             console.error(`Failed to load image for ${product.name}:`, imageSrc);
@@ -90,17 +90,10 @@ function ProductCard({ product }: { product: Product }) {
             isHovered={isHovered} 
           />
         )}
-
-        <div className="absolute top-4 left-4 z-10">
-          <span className="bg-accent text-black px-3 py-1 text-[8px] font-black tracking-widest uppercase italic">{product.category}</span>
-        </div>
       </div>
-      <div className="flex justify-between items-start px-2">
-        <div>
-          <h3 className="font-black text-xl tracking-tighter uppercase group-hover:text-accent duration-300">{product.name}</h3>
-          <p className="text-white/40 text-[9px] font-tech uppercase tracking-[0.3em]">Available Now</p>
-        </div>
-        <span className="font-bold text-accent text-lg italic">${product.price}</span>
+      <div className="flex flex-col px-1">
+        <h3 className="font-medium text-[11px] tracking-tight uppercase group-hover:text-accent transition-colors duration-300 truncate">{product.name}</h3>
+        <span className="font-sans text-[10px] text-white/70 italic">${product.price}</span>
       </div>
     </Link>
   );

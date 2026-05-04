@@ -59,7 +59,7 @@ export default function NewProduct() {
         className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
       >
         {/* Visual Content */}
-        <div className="relative aspect-[3/4] overflow-hidden bg-surface border border-white/5 accent-glow">
+        <div className="relative aspect-square overflow-hidden bg-surface border border-white/5">
           <img 
             src={imageSrc} 
             className="w-full h-full object-cover" 
@@ -78,7 +78,7 @@ export default function NewProduct() {
             </div>
           )}
           <div className="absolute top-8 left-8 z-10">
-            <span className="bg-accent text-black px-4 py-2 text-[10px] font-black tracking-widest uppercase italic">LATEST_RELEASE</span>
+            <span className="bg-accent text-black px-4 py-2 text-[10px] font-bold tracking-widest uppercase italic">LATEST_RELEASE</span>
           </div>
         </div>
 
@@ -88,15 +88,15 @@ export default function NewProduct() {
             <span className="font-tech text-xs tracking-[0.3em] text-accent uppercase block underline underline-offset-8 decoration-accent/30">
               NEW_MANIFESTATION
             </span>
-            <h2 className="text-8xl font-black uppercase leading-none tracking-tighter italic">
+            <h2 className="text-8xl font-display font-medium uppercase leading-none tracking-tighter italic">
               {latestProduct.name}
             </h2>
           </div>
 
           <div className="space-y-6">
             <div className="flex items-end gap-4">
-              <span className="text-6xl font-black text-accent italic leading-none">${latestProduct.price}</span>
-              <span className="text-[10px] font-tech text-white/30 uppercase tracking-widest mb-1">Currency: USD</span>
+              <span className="text-6xl font-display font-medium text-accent italic leading-none">${latestProduct.price}</span>
+              <span className="text-[10px] font-sans text-white/30 uppercase tracking-widest mb-1">Currency: USD</span>
             </div>
             
             <p className="text-white/40 italic text-lg leading-relaxed max-w-md">

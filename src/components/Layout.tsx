@@ -153,11 +153,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     { name: 'Foundry', path: '/foundry' },
   ];
 
-  const footerLinks = [
-    ...mainLinks,
-    { name: 'Admin', path: '/admin' },
-  ];
-
   return (
     <div className="min-h-screen bg-black text-primary selection:bg-accent selection:text-black overflow-x-hidden">
       {/* Background Mask Symbol */}
@@ -456,53 +451,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-black pt-16 pb-12 px-8 border-t border-white/10 relative">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
-          <div className="md:col-span-2">
-            <h3 className="text-7xl font-display text-accent mb-4 leading-none uppercase">UNITE</h3>
-            <p className="text-white/40 max-w-sm font-light italic text-lg leading-relaxed mb-8">
-              The Greater Domain. Authentic Streetwear. We are the architects of the manifested dream.
-            </p>
-          </div>
-          
-          <div>
-            <h4 className="font-tech text-xs tracking-[0.4em] uppercase text-accent mb-4 font-black underline underline-offset-8">MANIFEST</h4>
-            <div className="flex flex-col gap-4 font-black text-sm uppercase tracking-widest italic">
-              {footerLinks.map(link => (
-                <Link key={link.path} to={link.path} className="hover:text-accent transition-colors flex items-center justify-between group">
-                  {link.name} <ArrowUpRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
-                </Link>
-              ))}
-            </div>
-          </div>
-          
-          <div className="relative">
-            <h4 className="font-tech text-xs tracking-[0.4em] uppercase text-white/30 mb-8 font-black">NEWSLETTER</h4>
-            <div className="flex flex-col gap-4">
-              <div className="flex border-b border-white/20 pb-4 group focus-within:border-accent transition-colors">
-                <input 
-                  type="email" 
-                  placeholder="FREQUENCY ACCESS" 
-                  className="bg-transparent border-none outline-none text-[10px] font-black tracking-[0.4em] w-full placeholder:text-white/10 text-accent uppercase"
-                />
-                <button className="text-accent hover:scale-125 transition-transform"><ArrowUpRight size={20} /></button>
-              </div>
-              <p className="text-[9px] text-white/20 font-tech uppercase tracking-widest">Connect your frequency to our drops.</p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-end gap-8 pt-8 border-t border-white/10">
-          <div className="text-[10px] uppercase tracking-[0.6em] text-white/20 font-black">
-            Thee Unite &copy; SERIES 01 / Manifested 2024
-          </div>
-          <div className="flex gap-6 items-center">
-            <div className="flex gap-3">
-              <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <div className="w-2 h-2 rounded-full bg-white/10" />
-              <div className="w-2 h-2 rounded-full bg-white/10" />
-            </div>
-            <span className="text-[10px] font-black tracking-widest text-white/40 uppercase italic">Authentic Streetwear</span>
+      <footer className="bg-black py-4 px-8 border-t border-white/10">
+        <div className="max-w-7xl mx-auto flex justify-center">
+          <div className="text-[10px] uppercase tracking-[0.05em] text-white/60 font-medium">
+            &copy; THEE UNITE
           </div>
         </div>
       </footer>
