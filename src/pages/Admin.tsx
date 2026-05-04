@@ -804,43 +804,48 @@ export function HeroManager() {
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-      // Fetch Products to get categories
-      const prodSnap = await getDocs(collection(db, 'products'));
-      const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
-      setCategories(uniqueCats);
+      try {
+        setLoading(true);
+        // Fetch Products to get categories
+        const prodSnap = await getDocs(collection(db, 'products'));
+        const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
+        setCategories(uniqueCats);
 
-      // Fetch existing heros
-      const heroSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
-      const heroList = heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection));
-      setHeros(heroList);
-      setLoading(false);
+        // Fetch existing heros
+        const heroSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
+        const heroList = heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection));
+        setHeros(heroList);
 
-      // Auto-create missing heros for categories
-      const missingCats = uniqueCats.filter(cat => !heroList.find(h => h.category === cat));
-      if (missingCats.length > 0) {
-        const batch = writeBatch(db);
-        missingCats.forEach(cat => {
-          const docRef = doc(collection(db, 'heros'));
-          batch.set(docRef, {
-            category: cat,
-            title: cat,
-            subtitle: 'EXPLORE THE COLLECTION',
-            backgroundType: 'video',
-            backgroundUrl: '/hero-video.mp4',
-            textColor: '#ffffff',
-            fontSize: '120px',
-            fontWeight: '900',
-            textAlign: 'center',
-            fontFamily: 'Anton',
-            order: heroList.length + 1,
-            createdAt: new Date().toISOString()
+        // Auto-create missing heros for categories
+        const missingCats = uniqueCats.filter(cat => !heroList.find(h => h.category === cat));
+        if (missingCats.length > 0) {
+          const batch = writeBatch(db);
+          missingCats.forEach(cat => {
+            const docRef = doc(collection(db, 'heros'));
+            batch.set(docRef, {
+              category: cat,
+              title: cat,
+              subtitle: 'EXPLORE THE COLLECTION',
+              backgroundType: 'video',
+              backgroundUrl: '/hero-video.mp4',
+              textColor: '#ffffff',
+              fontSize: '120px',
+              fontWeight: '900',
+              textAlign: 'center',
+              fontFamily: 'Anton',
+              order: heroList.length + 1,
+              createdAt: new Date().toISOString()
+            });
           });
-        });
-        await batch.commit();
-        // Re-fetch
-        const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
-        setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
+          await batch.commit();
+          // Re-fetch
+          const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
+          setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
+        }
+      } catch (error) {
+        console.error("Error fetching hero data:", error);
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
