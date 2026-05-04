@@ -155,7 +155,7 @@ export default function Home() {
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  const [products, setProducts] = useState<Product[]>([]);
+  const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({});
   const [categoryHeros, setCategoryHeros] = useState<HeroSection[]>([]);
   const [loading, setLoading] = useState(true);
   const activeHeroRef = useRef<HeroSettings | null>(null);
@@ -164,7 +164,15 @@ export default function Home() {
     const loadProducts = async () => {
       try {
         const prodData = await fetchProducts();
-        setProducts(prodData);
+        // Group products by category
+        const grouped = prodData.reduce((acc, product) => {
+          const cat = product.category || 'GENERAL';
+          if (!acc[cat]) acc[cat] = [];
+          acc[cat].push(product);
+          return acc;
+        }, {} as Record<string, Product[]>);
+        
+        setGroupedProducts(grouped);
       } catch (error) {
         console.error("Error loading products:", error);
       }
@@ -241,6 +249,13 @@ export default function Home() {
     });
   };
 
+  // Sort categories: PREMIUM first, then others
+  const categories = Object.keys(groupedProducts).sort((a, b) => {
+    if (a.toUpperCase() === 'PREMIUM') return -1;
+    if (b.toUpperCase() === 'PREMIUM') return 1;
+    return a.localeCompare(b);
+  });
+
   return (
     <div className="bg-black">
       {/* Main Hero Section */}
@@ -266,6 +281,7 @@ export default function Home() {
                   <img 
                     src={activeHero.bgUrl}
                     className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
+                    alt="Hero Background"
                   />
                 )}
               </motion.div>
@@ -289,6 +305,7 @@ export default function Home() {
                   <img 
                     src={mainHero.bgUrl}
                     className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
+                    alt="Hero Background"
                   />
                 )}
               </motion.div>
@@ -318,8 +335,8 @@ export default function Home() {
               transition={{ delay: 0.7, duration: 0.8 }}
               className="flex flex-row items-center justify-center gap-4"
             >
-              <Link to="/shop" className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors">Shop Now</Link>
-              <Link to="/collection" className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors">The Story</Link>
+              <Link to="/collection" className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors">Shop Now</Link>
+              <Link to="/gallery" className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors">The Story</Link>
             </motion.div>
           </div>
           <motion.div
@@ -333,7 +350,7 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Category Sections */}
+      {/* Dynamic Content: Category Products -> Category Hero */}
       <div className="relative z-30 bg-black">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-accent font-tech">
@@ -341,80 +358,82 @@ export default function Home() {
             <p className="text-[10px] tracking-[0.5em] uppercase">SYNCHRONIZING_EXPERIENCE...</p>
           </div>
         ) : (
-          categoryHeros.map((hero, index) => {
-            const categoryProducts = products.filter(p => p.category === hero.category);
-            if (categoryProducts.length === 0) return null;
+          categories.map((cat, index) => {
+            const products = groupedProducts[cat];
+            const hero = categoryHeros.find(h => h.category === cat);
 
             return (
-              <React.Fragment key={hero.id}>
-                {/* Dynamic Category Hero */}
-                <section className="relative h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
-                  <div className="absolute inset-0 w-full h-full">
-                    {hero.backgroundType === 'video' ? (
-                      <video
-                        autoPlay loop muted playsInline
-                        className="w-full h-full object-cover brightness-[0.5]"
-                        src={hero.backgroundUrl}
-                      />
-                    ) : (
-                      <img
-                        src={hero.backgroundUrl}
-                        className="w-full h-full object-cover brightness-[0.5]"
-                        alt={hero.category}
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
-                  </div>
-                  
-                  <div 
-                    className="relative z-10 px-6 w-full max-w-7xl mx-auto"
-                    style={{ textAlign: hero.textAlign }}
-                  >
-                    <motion.div
-                      initial={{ opacity: 0, y: 30 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                      viewport={{ once: true }}
-                    >
-                      <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-6 block italic opacity-70">
-                        {hero.category}_SERIES
-                      </span>
-                      <h2 
-                        className="uppercase italic tracking-tighter leading-[0.85]"
-                        style={{ 
-                          color: hero.textColor,
-                          fontSize: hero.fontSize,
-                          fontWeight: hero.fontWeight,
-                          fontFamily: hero.fontFamily
-                        }}
-                      >
-                        {hero.title}
-                      </h2>
-                      {hero.subtitle && (
-                        <p className="mt-8 font-tech text-sm tracking-[0.2em] uppercase opacity-40 max-w-xl inline-block">
-                          {hero.subtitle}
-                        </p>
-                      )}
-                    </motion.div>
-                  </div>
-                </section>
-
+              <React.Fragment key={cat}>
                 {/* Category Products */}
                 <div className="py-24">
                   <div className="px-8 mb-12 flex items-end justify-between">
                     <div>
                       <span className="text-accent font-tech text-[10px] tracking-[0.4em] uppercase mb-2 block">CATALOG_SCAN</span>
-                      <h3 className="text-5xl font-black uppercase italic tracking-tighter">{hero.category}</h3>
+                      <h3 className="text-5xl font-display font-medium uppercase italic tracking-tighter">{cat}</h3>
                     </div>
-                    <Link to="/shop" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-accent transition-colors flex items-center gap-4">
+                    <Link to="/collection" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-accent transition-colors flex items-center gap-4">
                       VIEW FULL COLLECTION <ChevronRight size={14} />
                     </Link>
                   </div>
                   <RunwayProducts 
-                    products={categoryProducts} 
-                    showCart={index === categoryHeros.length - 1} 
+                    products={products} 
+                    showCart={index === categories.length - 1} 
                   />
                 </div>
+
+                {/* Category Hero Section */}
+                {hero && (
+                  <section className="relative h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
+                    <div className="absolute inset-0 w-full h-full">
+                      {hero.backgroundType === 'video' ? (
+                        <video
+                          autoPlay loop muted playsInline
+                          className="w-full h-full object-cover brightness-[0.5]"
+                          src={hero.backgroundUrl}
+                        />
+                      ) : (
+                        <img
+                          src={hero.backgroundUrl}
+                          className="w-full h-full object-cover brightness-[0.5]"
+                          alt={hero.category}
+                        />
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
+                    </div>
+                    
+                    <div 
+                      className="relative z-10 px-6 w-full max-w-7xl mx-auto"
+                      style={{ textAlign: hero.textAlign }}
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                        viewport={{ once: true }}
+                      >
+                        <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-6 block italic opacity-70">
+                          {hero.category}_SERIES
+                        </span>
+                        <h2 
+                          className="uppercase italic tracking-tighter leading-[0.85]"
+                          style={{ 
+                            color: hero.textColor,
+                            fontSize: `clamp(4rem, 10vw, ${hero.fontSize})`,
+                            fontWeight: hero.fontWeight,
+                            fontFamily: hero.fontFamily === 'Anton' ? 'Playfair Display' : hero.fontFamily
+                          }}
+                        >
+                          {hero.title}
+                        </h2>
+                        {hero.subtitle && (
+                          <p className="mt-8 font-tech text-sm tracking-[0.2em] uppercase opacity-40 max-w-xl inline-block">
+                            {hero.subtitle}
+                          </p>
+                        )}
+                      </motion.div>
+                    </div>
+                  </section>
+                )}
               </React.Fragment>
             );
           })

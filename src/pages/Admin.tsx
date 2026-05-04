@@ -1020,9 +1020,45 @@ export function HeroManager() {
                     <div className="uppercase leading-tight">{editingHero.title || 'PREVIEW_TITLE'}</div>
                     <div className="text-[0.4em] mt-2 opacity-80">{editingHero.subtitle || 'SUBTITLE_PREVIEW'}</div>
                   </div>
-                  <button onClick={() => setShowPicker(true)} className="absolute bottom-4 right-4 bg-accent text-black p-2 rounded-full shadow-xl">
-                    <Upload size={16} />
-                  </button>
+                  
+                  {/* Media Controls */}
+                  <div className="absolute bottom-4 right-4 flex gap-2">
+                    <button 
+                      onClick={() => setShowPicker(true)} 
+                      className="bg-accent text-black p-2 rounded-full shadow-xl hover:scale-110 transition-transform"
+                      title="Select from Library"
+                    >
+                      <Database size={16} />
+                    </button>
+                    <label 
+                      className="bg-white text-black p-2 rounded-full shadow-xl cursor-pointer hover:scale-110 transition-transform"
+                      title="Upload New Asset"
+                    >
+                      <Upload size={16} />
+                      <input 
+                        type="file" 
+                        className="hidden" 
+                        accept="image/*,video/*" 
+                        onChange={async (e) => {
+                          if (!e.target.files?.length) return;
+                          setSaving(true);
+                          try {
+                            const file = e.target.files[0];
+                            const url = await uploadFile(file, `heros/${Date.now()}_${file.name}`);
+                            setEditingHero(h => h ? ({ 
+                              ...h, 
+                              backgroundUrl: url, 
+                              backgroundType: file.type.startsWith('video') ? 'video' : 'image' 
+                            }) : null);
+                          } catch (err) {
+                            alert('Upload failed');
+                          } finally {
+                            setSaving(false);
+                          }
+                        }} 
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
