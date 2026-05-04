@@ -907,7 +907,30 @@ export function HeroManager() {
       )}
 
       <header className="flex justify-between items-end mb-12">
-        <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_CMS</h2>
+        <div className="flex flex-col gap-2">
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_CMS</h2>
+          <button 
+            onClick={async () => {
+              console.log("DEBUG: Testing Firestore Write...");
+              console.log("Project ID:", db.app.options.projectId);
+              console.log("Current User:", auth.currentUser?.uid || "Not Signed In");
+              try {
+                const testRef = await addDoc(collection(db, "test_writes"), { 
+                  timestamp: new Date().toISOString(),
+                  user: auth.currentUser?.uid || "anonymous"
+                });
+                console.log("DEBUG: Test Write Success! Doc ID:", testRef.id);
+                alert("DEBUG: Test Write SUCCESS! See console for details.");
+              } catch (err: any) {
+                console.error("DEBUG: Test Write FAILED:", err.code, err.message, err);
+                alert(`DEBUG: Test Write FAILED: ${err.message}`);
+              }
+            }}
+            className="text-[8px] font-tech text-accent/40 hover:text-accent underline uppercase text-left"
+          >
+            [ RUN_ISOLATION_TEST ]
+          </button>
+        </div>
         <button 
           onClick={() => setEditingHero({
             category: categories[0] || 'GENERAL',
