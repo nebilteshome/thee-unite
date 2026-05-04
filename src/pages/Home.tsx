@@ -158,19 +158,25 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryHeros, setCategoryHeros] = useState<HeroSection[]>([]);
   const [loading, setLoading] = useState(true);
+  const activeHeroRef = useRef<HeroSettings | null>(null);
 
   useEffect(() => {
     const loadData = async () => {
-      setLoading(true);
-      const [prodData, heroSnap] = await Promise.all([
-        fetchProducts(),
-        getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')))
-      ]);
-      
-      const heros = heroSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
-      setProducts(prodData);
-      setCategoryHeros(heros);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const [prodData, heroSnap] = await Promise.all([
+          fetchProducts(),
+          getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')))
+        ]);
+        
+        const heros = heroSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
+        setProducts(prodData);
+        setCategoryHeros(heros);
+      } catch (error) {
+        console.error("Error loading home data:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadData();
   }, []);
@@ -180,30 +186,38 @@ export default function Home() {
     const unsubscribe = onSnapshot(doc(db, 'settings', 'hero'), (snap) => {
       if (snap.exists()) {
         const newData = snap.data() as HeroSettings;
-        if (!activeHero) {
+        const currentActive = activeHeroRef.current;
+
+        if (!currentActive) {
           preloadAsset(newData).then(() => {
             setMainHero(newData);
             setActiveHero(newData);
+            activeHeroRef.current = newData;
           });
           return;
         }
-        if (newData.bgUrl !== activeHero.bgUrl || newData.bgType !== activeHero.bgType) {
+
+        if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
           preloadAsset(newData).then(() => {
             setMainHero(newData);
             setIsTransitioning(true);
             setTimeout(() => {
               setActiveHero(newData);
+              activeHeroRef.current = newData;
               setIsTransitioning(false);
             }, 1000);
           });
         } else {
           setMainHero(newData);
           setActiveHero(newData);
+          activeHeroRef.current = newData;
         }
       }
+    }, (error) => {
+      console.error("Hero settings snapshot error:", error);
     });
     return () => unsubscribe();
-  }, [activeHero]);
+  }, []);
 
   const preloadAsset = (settings: HeroSettings): Promise<void> => {
     return new Promise((resolve) => {

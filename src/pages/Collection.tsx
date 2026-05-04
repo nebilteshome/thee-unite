@@ -10,11 +10,16 @@ export default function Collection() {
 
   useEffect(() => {
     const loadProducts = async () => {
-      setLoading(true);
-      const data = await fetchProducts();
-      console.log("Collection products fetched:", data);
-      setProducts(data);
-      setLoading(false);
+      try {
+        setLoading(true);
+        const data = await fetchProducts();
+        console.log("Collection products fetched:", data);
+        setProducts(data);
+      } catch (error) {
+        console.error("Error loading collection products:", error);
+      } finally {
+        setLoading(false);
+      }
     };
     loadProducts();
   }, []);
