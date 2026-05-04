@@ -146,7 +146,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   };
 
   const mainLinks = [
-    { name: 'Collection', path: '/collection' },
+    { name: 'Shop', path: '/collection' },
+    { name: 'New', path: '/new' },
     { name: 'Gallery', path: '/gallery' },
     { name: 'Archive', path: '/archive' },
     { name: 'Foundry', path: '/foundry' },
@@ -167,9 +168,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6">
         {/* Left Side */}
         <div className="hidden md:flex items-center gap-8 flex-1">
-          <Link to="/shop" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors">Shop</Link>
-          <Link to="/collection" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors flex items-center gap-1">
-            247 <span className="text-accent">⚡</span>
+          <Link to="/collection" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors">Shop</Link>
+          <Link to="/new" className="text-[10px] tracking-[0.2em] uppercase font-bold hover:text-accent transition-colors flex items-center gap-1">
+            NEW <span className="text-accent">⚡</span>
           </Link>
         </div>
 

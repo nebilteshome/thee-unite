@@ -38,10 +38,10 @@ export default function Collection() {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-24">
         <div className="relative">
           <span className="font-tech text-xs tracking-[0.3em] text-accent uppercase mb-4 block underline underline-offset-8 decoration-accent/30">DROP 001_SERIES</span>
-          <h2 className="text-8xl font-black uppercase leading-none tracking-tighter italic">COLLECTION</h2>
+          <h2 className="text-8xl font-black uppercase leading-none tracking-tighter italic">SHOP</h2>
         </div>
-        <Link to="/shop" className="text-xs font-black tracking-[0.3em] uppercase py-4 px-8 border border-accent text-accent hover:bg-accent hover:text-black transition-all">
-          VIEW FULL SHOP
+        <Link to="/new" className="text-xs font-black tracking-[0.3em] uppercase py-4 px-8 border border-accent text-accent hover:bg-accent hover:text-black transition-all">
+          VIEW LATEST RELEASE
         </Link>
       </div>
 
