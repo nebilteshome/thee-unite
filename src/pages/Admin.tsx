@@ -855,12 +855,17 @@ export function HeroManager() {
     if (!editingHero) return;
     setSaving(true);
     try {
+      // Sanitize data (remove undefined)
+      const cleanData = Object.fromEntries(
+        Object.entries(editingHero).filter(([_, v]) => v !== undefined)
+      );
+
       if (editingHero.id) {
-        const { id, ...data } = editingHero;
-        await updateDoc(doc(db, 'heros', id), data);
+        const { id, ...data } = cleanData;
+        await updateDoc(doc(db, 'heros', id as string), data);
       } else {
         await addDoc(collection(db, 'heros'), {
-          ...editingHero,
+          ...cleanData,
           createdAt: new Date().toISOString()
         });
       }
@@ -869,9 +874,9 @@ export function HeroManager() {
       const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
       setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
       alert('Hero Manifest Synchronized');
-    } catch (error) {
-      console.error("Error saving hero:", error);
-      alert('Save Failed: Check console for technical data');
+    } catch (error: any) {
+      console.error("FULL FIREBASE ERROR:", error);
+      alert(`Save Failed: ${error.message || 'Unknown error'}`);
     } finally { 
       setSaving(false); 
     }

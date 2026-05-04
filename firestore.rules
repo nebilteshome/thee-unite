@@ -40,7 +40,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // 4. Admin Setup (Bootstrap)
+    // 4. Heros Collection
+    match /heros/{heroId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 5. Admin Setup (Bootstrap)
     match /admins/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow create: if isSignedIn() && (request.auth.token.email == 'fffg3839@gmail.com' || isAdmin());
