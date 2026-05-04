@@ -102,25 +102,11 @@ interface Order {
 export default function Admin() {
   const { user, isAdmin: adminStatus, loading } = useAuth();
 
-  const handleLogin = async () => {
-    if (!import.meta.env.VITE_FIREBASE_API_KEY) {
-      alert("CRITICAL_ERROR: Firebase configuration is missing. Please ensure all VITE_FIREBASE_* environment variables are set in Vercel.");
-      return;
-    }
-
-    try {
-      const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
-    } catch (error: any) {
-      console.error("Auth Error:", error);
-      alert(`AUTH_FAILED: ${error.message}`);
-    }
-  };
-
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center font-tech text-accent">SYNCHRONIZING CORE...</div>;
 
-  if (!user || !adminStatus) {
-    return <LoginView user={user} adminStatus={adminStatus} onLogin={handleLogin} />;
+  // The guard handles the redirection, but we keep this for safety
+  if (!user || (!adminStatus && user.email !== 'fffg3839@gmail.com')) {
+    return <Navigate to="/admin/login" replace />;
   }
 
   return (

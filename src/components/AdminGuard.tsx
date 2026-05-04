@@ -18,9 +18,9 @@ const AdminGuard: React.FC<AdminGuardProps> = ({ children }) => {
     );
   }
 
-  // If not logged in, we allow them to proceed to /admin so they can see the LoginView
+  // If not logged in, redirect to login page
   if (!user) {
-    return <>{children}</>;
+    return <Navigate to="/admin/login" state={{ from: location }} replace />;
   }
 
   if (!isAdmin) {

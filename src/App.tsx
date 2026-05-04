@@ -13,6 +13,7 @@ import Shop from './pages/Shop';
 import Gallery from './pages/Gallery';
 import Archive from './pages/Archive';
 import Foundry from './pages/Foundry';
+import AdminLogin from './pages/AdminLogin';
 import Admin, { ProductManager, GalleryManager, HeroManager, PaymentManager, OrderManager, PolicyManager } from './pages/Admin';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import gsap from 'gsap';
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/gallery" element={<Gallery />} />
             <Route path="/archive" element={<Archive />} />
             <Route path="/foundry" element={<Foundry />} />
+            <Route path="/admin/login" element={<AdminLogin />} />
             <Route 
               path="/admin" 
               element={
