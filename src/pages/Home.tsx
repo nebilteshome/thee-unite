@@ -161,24 +161,29 @@ export default function Home() {
   const activeHeroRef = useRef<HeroSettings | null>(null);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadProducts = async () => {
       try {
-        setLoading(true);
-        const [prodData, heroSnap] = await Promise.all([
-          fetchProducts(),
-          getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')))
-        ]);
-        
-        const heros = heroSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
+        const prodData = await fetchProducts();
         setProducts(prodData);
-        setCategoryHeros(heros);
       } catch (error) {
-        console.error("Error loading home data:", error);
-      } finally {
-        setLoading(false);
+        console.error("Error loading products:", error);
       }
     };
-    loadData();
+    loadProducts();
+  }, []);
+
+  // Live updates for category heros
+  useEffect(() => {
+    const q = query(collection(db, 'heros'), orderBy('order', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const heros = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
+      setCategoryHeros(heros);
+      setLoading(false);
+    }, (error) => {
+      console.error("Heros snapshot error:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Live updates for main hero

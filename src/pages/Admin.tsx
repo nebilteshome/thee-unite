@@ -856,7 +856,8 @@ export function HeroManager() {
     setSaving(true);
     try {
       if (editingHero.id) {
-        await updateDoc(doc(db, 'heros', editingHero.id), editingHero);
+        const { id, ...data } = editingHero;
+        await updateDoc(doc(db, 'heros', id), data);
       } else {
         await addDoc(collection(db, 'heros'), {
           ...editingHero,
@@ -868,7 +869,12 @@ export function HeroManager() {
       const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
       setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
       alert('Hero Manifest Synchronized');
-    } finally { setSaving(false); }
+    } catch (error) {
+      console.error("Error saving hero:", error);
+      alert('Save Failed: Check console for technical data');
+    } finally { 
+      setSaving(false); 
+    }
   };
 
   const handleDelete = async (id: string) => {
