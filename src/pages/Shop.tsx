@@ -61,8 +61,12 @@ export default function Shop() {
       }
     };
     const fetchPolicies = async () => {
-      const snap = await getDoc(doc(db, 'settings', 'policies'));
-      if (snap.exists()) setPolicies(snap.data());
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'policies'));
+        if (snap.exists()) setPolicies(snap.data());
+      } catch (e) {
+        console.error("Error fetching policies:", e);
+      }
     };
     fetchProduct();
     fetchPolicies();
