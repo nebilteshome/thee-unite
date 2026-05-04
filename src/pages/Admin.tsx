@@ -792,6 +792,9 @@ export function HeroManager() {
     const fetchData = async () => {
       try {
         setLoading(true);
+        console.log("HERO_MANAGER: Starting fetch...");
+        console.log("HERO_MANAGER: Auth State:", auth.currentUser?.uid || "NO_USER");
+
         // Fetch Products to get categories
         const prodSnap = await getDocs(collection(db, 'products'));
         const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
@@ -828,13 +831,24 @@ export function HeroManager() {
           const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
           setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
         }
-      } catch (error) {
-        console.error("Error fetching hero data:", error);
+      } catch (error: any) {
+        console.error("HERO_MANAGER: Error fetching data:", error.code, error.message, error);
+        alert(`SYNC_ERROR: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+    // Ensure we wait for auth to be initialized if we're in the admin area
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchData();
+      } else {
+        console.log("HERO_MANAGER: No user found, waiting for auth guard redirect...");
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleSave = async () => {
