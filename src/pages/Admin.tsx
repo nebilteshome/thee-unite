@@ -829,24 +829,27 @@ export function HeroManager() {
       try {
         setLoading(true);
         console.log("HERO_MANAGER: Starting fetch...");
-        console.log("HERO_MANAGER: Auth State:", auth.currentUser?.uid || "NO_USER");
 
-        // Fetch Products to get categories
+        // 1. Fetch Products to get unique categories
         const prodSnap = await getDocs(collection(db, 'products'));
         const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
         setCategories(uniqueCats);
 
-        // Fetch existing heros
-        const heroSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
-        const heroList = heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection));
-        setHeros(heroList);
-
-        // Auto-create missing heros for categories
+        // 2. Fetch all heros from settings collection
+        // IDs: 'hero' (Main) or 'hero_{category}' (Category sections)
+        const settingsSnap = await getDocs(collection(db, 'settings'));
+        let heroList = settingsSnap.docs
+          .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
+          .map(d => ({ id: d.id, ...d.data() } as HeroSection));
+        
+        // 3. Auto-create missing heros for categories in settings collection
         const missingCats = uniqueCats.filter(cat => !heroList.find(h => h.category === cat));
+        
         if (missingCats.length > 0) {
           const batch = writeBatch(db);
           missingCats.forEach(cat => {
-            const docRef = doc(collection(db, 'heros'));
+            const docId = `hero_${cat}`;
+            const docRef = doc(db, 'settings', docId);
             batch.set(docRef, {
               category: cat,
               title: cat,
@@ -863,25 +866,25 @@ export function HeroManager() {
             });
           });
           await batch.commit();
-          // Re-fetch
-          const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
-          setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
+          
+          // Re-fetch from settings
+          const updatedSnap = await getDocs(collection(db, 'settings'));
+          heroList = updatedSnap.docs
+            .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
+            .map(d => ({ id: d.id, ...d.data() } as HeroSection));
         }
+        
+        setHeros(heroList.sort((a, b) => (a.order || 0) - (b.order || 0)));
       } catch (error: any) {
-        console.error("HERO_MANAGER: Error fetching data:", error.code, error.message, error);
+        console.error("HERO_MANAGER: Sync Error:", error);
         alert(`SYNC_ERROR: ${error.message}`);
       } finally {
         setLoading(false);
       }
     };
 
-    // Ensure we wait for auth to be initialized if we're in the admin area
     const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchData();
-      } else {
-        console.log("HERO_MANAGER: No user found, waiting for auth guard redirect...");
-      }
+      if (user) fetchData();
     });
 
     return () => unsubscribe();

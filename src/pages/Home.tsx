@@ -156,7 +156,7 @@ export default function Home() {
   const [isTransitioning, setIsTransitioning] = useState(false);
   
   const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({});
-  const [categoryHeros, setCategoryHeros] = useState<HeroSection[]>([]);
+  const [heroMap, setHeroMap] = useState<Record<string, HeroSection>>({});
   const [loading, setLoading] = useState(true);
   const activeHeroRef = useRef<HeroSettings | null>(null);
 
@@ -184,21 +184,21 @@ export default function Home() {
   useEffect(() => {
     const q = query(collection(db, 'settings'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allSettings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const allSettings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
       
-      // Extract Category Heroes
-      const heros = allSettings
-        .filter(d => d.id.startsWith('hero_'))
-        .map(d => ({ ...d, id: d.id.replace('hero_', '') } as unknown as HeroSection))
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      setCategoryHeros(heros);
+      // 1. Create Hero Map for categories
+      const hMap: Record<string, HeroSection> = {};
+      allSettings.forEach(d => {
+        if (d.id.startsWith('hero_') && d.category) {
+          hMap[d.category] = d as HeroSection;
+        }
+      });
+      setHeroMap(hMap);
 
-      // Extract and Update Main Hero
+      // 2. Update Main Hero
       const mainHeroDoc = allSettings.find(d => d.id === 'hero');
       if (mainHeroDoc) {
-        // Harmonize fields from HeroSection storage format to HeroSettings consumer format
-        const data = mainHeroDoc as any;
+        const data = mainHeroDoc;
         const newData: HeroSettings = {
           title: data.title || 'THEE UNITE',
           tagline: data.tagline || 'EST 2024',
@@ -368,7 +368,9 @@ export default function Home() {
         ) : (
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
-            const hero = categoryHeros.find(h => h.category === cat);
+            const hero = heroMap[cat];
+
+            console.log(`RENDER_LOG: Category: ${cat} | Hero Found: ${!!hero}`);
 
             return (
               <React.Fragment key={cat}>
