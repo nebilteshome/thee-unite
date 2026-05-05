@@ -200,16 +200,28 @@ export function ProductManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    const data = {
-      ...formData,
-      price: parseFloat(formData.price),
-      stock: parseInt(formData.stock) || 0,
-      sizes: formData.sizes.split(',').map(s => s.trim()).filter(Boolean),
-      colors: formData.colors.split(',').map(c => c.trim()).filter(Boolean),
-      createdAt: isEditing ? isEditing.createdAt : new Date().toISOString()
-    };
-
+    
     try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+
+      // ENSURE AUTH BEFORE ANY WRITE
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("Not authenticated");
+        alert("SESSION_EXPIRED: Please re-authenticate.");
+        return;
+      }
+
+      const data = {
+        ...formData,
+        price: parseFloat(formData.price),
+        stock: parseInt(formData.stock) || 0,
+        sizes: formData.sizes.split(',').map(s => s.trim()).filter(Boolean),
+        colors: formData.colors.split(',').map(c => c.trim()).filter(Boolean),
+        createdAt: isEditing ? isEditing.createdAt : new Date().toISOString()
+      };
+
       if (isEditing) {
         await updateDoc(doc(db, 'products', isEditing.id), data);
       } else {
@@ -217,7 +229,9 @@ export function ProductManager() {
       }
       resetForm();
       fetchProducts();
+      alert("Catalog Manifest Synchronized");
     } catch (err: any) {
+      console.error("Save failed:", err);
       alert(`Save failed: ${err.message}`);
     } finally {
       setSaving(false);
@@ -657,6 +671,10 @@ export function GalleryManager() {
     if (!e.target.files?.length) return;
     setUploading(true);
     try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) throw new Error("AUTH_REQUIRED");
+
       const files = Array.from(e.target.files) as File[];
       const batch = writeBatch(db);
       for (const file of files) {
@@ -673,6 +691,10 @@ export function GalleryManager() {
       }
       await batch.commit();
       await fetchGallery();
+      alert("Gallery Core Synchronized");
+    } catch (err: any) {
+      console.error("Upload failed:", err);
+      alert(`Upload failed: ${err.message}`);
     } finally {
       setUploading(false);
     }
@@ -685,8 +707,14 @@ export function GalleryManager() {
     [newItems[index], newItems[targetIndex]] = [newItems[targetIndex], newItems[index]];
     setSaving(true);
     try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) throw new Error("AUTH_REQUIRED");
+
       await Promise.all(newItems.map((item, i) => updateDoc(doc(db, 'gallery', item.id), { order: i })));
       fetchGallery();
+    } catch (err: any) {
+      alert(`Move failed: ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -694,8 +722,16 @@ export function GalleryManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Erase this manifest?')) return;
-    await deleteDoc(doc(db, 'gallery', id));
-    fetchGallery();
+    try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) throw new Error("AUTH_REQUIRED");
+
+      await deleteDoc(doc(db, 'gallery', id));
+      fetchGallery();
+    } catch (err: any) {
+      alert(`Delete failed: ${err.message}`);
+    }
   };
 
   return (
@@ -855,27 +891,44 @@ export function HeroManager() {
     if (!editingHero) return;
     setSaving(true);
     try {
-      // Sanitize data (remove undefined)
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+
+      // ENSURE AUTH BEFORE ANY WRITE
+      const user = auth.currentUser;
+      if (!user) {
+        console.error("Not authenticated");
+        alert("SESSION_EXPIRED: Please re-authenticate.");
+        return;
+      }
+
+      // Sanitize data
       const cleanData = Object.fromEntries(
         Object.entries(editingHero).filter(([_, v]) => v !== undefined)
       );
 
-      if (editingHero.id) {
-        const { id, ...data } = cleanData;
-        await updateDoc(doc(db, 'heros', id as string), data);
-      } else {
-        await addDoc(collection(db, 'heros'), {
-          ...cleanData,
-          createdAt: new Date().toISOString()
-        });
-      }
+      // Ensure hero is saved in: settings -> hero
+      // We'll use the category as part of the ID if it's a category hero, 
+      // or just 'hero' if it's the main one.
+      const docId = editingHero.id || (editingHero.category === 'MAIN' ? 'hero' : `hero_${editingHero.category}`);
+      
+      await setDoc(doc(db, 'settings', docId), {
+        ...cleanData,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
       setEditingHero(null);
-      // Re-fetch
-      const updatedSnap = await getDocs(query(collection(db, 'heros'), orderBy('order', 'asc')));
-      setHeros(updatedSnap.docs.map(d => ({ id: d.id, ...d.data() } as HeroSection)));
+      // Re-fetch from settings collection
+      const updatedSnap = await getDocs(collection(db, 'settings'));
+      const heroList = updatedSnap.docs
+        .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
+        .map(d => ({ id: d.id, ...d.data() } as HeroSection))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      
+      setHeros(heroList);
       alert('Hero Manifest Synchronized');
     } catch (error: any) {
-      console.error("FULL FIREBASE ERROR:", error);
+      console.error("Save failed:", error);
       alert(`Save Failed: ${error.message || 'Unknown error'}`);
     } finally { 
       setSaving(false); 
@@ -884,8 +937,16 @@ export function HeroManager() {
 
   const handleDelete = async (id: string) => {
     if (!confirm('Destroy this hero manifest?')) return;
-    await deleteDoc(doc(db, 'heros', id));
-    setHeros(heros.filter(h => h.id !== id));
+    
+    try {
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) return;
+      
+      await deleteDoc(doc(db, 'settings', id));
+      setHeros(heros.filter(h => h.id !== id));
+    } catch (error: any) {
+      alert(`Delete failed: ${error.message}`);
+    }
   };
 
   if (loading) return <div className="py-20 text-center font-tech text-xs text-accent">RECONSTRUCTING_HERO_CORE...</div>;
@@ -1174,8 +1235,14 @@ export function PolicyManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) throw new Error("AUTH_REQUIRED");
+
       await setDoc(doc(db, 'settings', 'policies'), policies);
       alert('Policies Synchronized');
+    } catch (err: any) {
+      alert(`Save failed: ${err.message}`);
     } finally { setSaving(false); }
   };
 
@@ -1218,8 +1285,14 @@ export function PaymentManager() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // FORCE TOKEN REFRESH
+      await auth.currentUser?.getIdToken(true);
+      if (!auth.currentUser) throw new Error("AUTH_REQUIRED");
+
       await setDoc(doc(db, 'settings', 'payments'), payments);
       alert('Payments Secured');
+    } catch (err: any) {
+      alert(`Save failed: ${err.message}`);
     } finally { setSaving(false); }
   };
 

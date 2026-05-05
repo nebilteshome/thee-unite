@@ -1,59 +1,40 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 0. Helpers
-    function isSignedIn() {
-      return request.auth != null;
-    }
-    
+
     function isAdmin() {
-      return isSignedIn() && (
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == 'fffg3839@gmail.com'
-      );
+      return request.auth != null &&
+             request.auth.token.email == "fffg3839@gmail.com";
     }
 
-    // 1. Products Collection
+    // HERO / SETTINGS
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // PRODUCTS
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 2. Gallery Collection
+    // GALLERY
     match /gallery/{imageId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
-    // 3. Settings Collection
-    match /settings/{settingId} {
-      allow read: if settingId != 'payments' || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    // 4. Heros Collection
-    match /heros/{heroId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    // 5. Orders Collection
+    // ORDERS
     match /orders/{orderId} {
       allow read: if isAdmin();
-      allow create: if true; // Allow customers to place orders
+      allow create: if true;
       allow update, delete: if isAdmin();
     }
 
-    // 6. Admin Setup
-    match /admins/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow create: if isSignedIn() && (request.auth.token.email == 'fffg3839@gmail.com' || isAdmin());
-      allow update, delete: if isAdmin();
-    }
-    
-    // 7. Test Writes (for debugging)
-    match /test_writes/{docId} {
-      allow read, write: if true;
+    // FALLBACK (BLOCK EVERYTHING ELSE)
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

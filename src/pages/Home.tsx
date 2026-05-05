@@ -180,25 +180,33 @@ export default function Home() {
     loadProducts();
   }, []);
 
-  // Live updates for category heros
+  // Live updates for all heroes (Main and Category) from settings collection
   useEffect(() => {
-    const q = query(collection(db, 'heros'), orderBy('order', 'asc'));
+    const q = query(collection(db, 'settings'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const heros = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as HeroSection));
+      const allSettings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Extract Category Heroes
+      const heros = allSettings
+        .filter(d => d.id.startsWith('hero_'))
+        .map(d => ({ ...d, id: d.id.replace('hero_', '') } as unknown as HeroSection))
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
+      
       setCategoryHeros(heros);
-      setLoading(false);
-    }, (error) => {
-      console.error("Heros snapshot error:", error);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
 
-  // Live updates for main hero
-  useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'hero'), (snap) => {
-      if (snap.exists()) {
-        const newData = snap.data() as HeroSettings;
+      // Extract and Update Main Hero
+      const mainHeroDoc = allSettings.find(d => d.id === 'hero');
+      if (mainHeroDoc) {
+        // Harmonize fields from HeroSection storage format to HeroSettings consumer format
+        const data = mainHeroDoc as any;
+        const newData: HeroSettings = {
+          title: data.title || 'THEE UNITE',
+          tagline: data.tagline || 'EST 2024',
+          subtitle: data.subtitle || '',
+          bgUrl: data.backgroundUrl || data.bgUrl || '/hero-video.mp4',
+          bgType: data.backgroundType || data.bgType || 'video'
+        };
+        
         const currentActive = activeHeroRef.current;
 
         if (!currentActive) {
@@ -207,10 +215,7 @@ export default function Home() {
             setActiveHero(newData);
             activeHeroRef.current = newData;
           });
-          return;
-        }
-
-        if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
+        } else if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
           preloadAsset(newData).then(() => {
             setMainHero(newData);
             setIsTransitioning(true);
@@ -226,8 +231,11 @@ export default function Home() {
           activeHeroRef.current = newData;
         }
       }
+      
+      setLoading(false);
     }, (error) => {
-      console.error("Hero settings snapshot error:", error);
+      console.error("Settings sync error:", error);
+      setLoading(false);
     });
     return () => unsubscribe();
   }, []);
