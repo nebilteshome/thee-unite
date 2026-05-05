@@ -816,68 +816,29 @@ export function GalleryManager() {
 }
 
 export function HeroManager() {
-  const [heros, setHeros] = useState<HeroSection[]>([]);
+  const [categoryMedia, setCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
   const [categories, setCategories] = useState<string[]>([]);
-  const [editingHero, setEditingHero] = useState<Partial<HeroSection> | null>(null);
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [activePreview, setActivePreview] = useState<Partial<HeroSection> | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log("HERO_MANAGER: Starting fetch...");
-
         // 1. Fetch Products to get unique categories
         const prodSnap = await getDocs(collection(db, 'products'));
         const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
         setCategories(uniqueCats);
 
-        // 2. Fetch all heros from settings collection
-        // IDs: 'hero' (Main) or 'hero_{category}' (Category sections)
-        const settingsSnap = await getDocs(collection(db, 'settings'));
-        let heroList = settingsSnap.docs
-          .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
-          .map(d => ({ id: d.id, ...d.data() } as HeroSection));
-        
-        // 3. Auto-create missing heros for categories in settings collection
-        const missingCats = uniqueCats.filter(cat => !heroList.find(h => h.category === cat));
-        
-        if (missingCats.length > 0) {
-          const batch = writeBatch(db);
-          missingCats.forEach(cat => {
-            const docId = `hero_${cat}`;
-            const docRef = doc(db, 'settings', docId);
-            batch.set(docRef, {
-              category: cat,
-              title: cat,
-              subtitle: 'EXPLORE THE COLLECTION',
-              backgroundType: 'video',
-              backgroundUrl: '/hero-video.mp4',
-              textColor: '#ffffff',
-              fontSize: '120px',
-              fontWeight: '900',
-              textAlign: 'center',
-              fontFamily: 'Anton',
-              order: heroList.length + 1,
-              createdAt: new Date().toISOString()
-            });
-          });
-          await batch.commit();
-          
-          // Re-fetch from settings
-          const updatedSnap = await getDocs(collection(db, 'settings'));
-          heroList = updatedSnap.docs
-            .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
-            .map(d => ({ id: d.id, ...d.data() } as HeroSection));
+        // 2. Fetch category media from settings/categoryMedia
+        const mediaSnap = await getDoc(doc(db, 'settings', 'categoryMedia'));
+        if (mediaSnap.exists()) {
+          setCategoryMedia(mediaSnap.data() as any);
         }
-        
-        setHeros(heroList.sort((a, b) => (a.order || 0) - (b.order || 0)));
       } catch (error: any) {
-        console.error("HERO_MANAGER: Sync Error:", error);
-        alert(`SYNC_ERROR: ${error.message}`);
+        console.error("MEDIA_MANAGER: Sync Error:", error);
       } finally {
         setLoading(false);
       }
@@ -886,219 +847,77 @@ export function HeroManager() {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) fetchData();
     });
-
     return () => unsubscribe();
   }, []);
 
-  const handleSave = async () => {
-    if (!editingHero) return;
+  const handleSaveMedia = async (category: string, url: string, type: 'image' | 'video') => {
     setSaving(true);
     try {
-      // FORCE TOKEN REFRESH
       await auth.currentUser?.getIdToken(true);
-
-      // ENSURE AUTH BEFORE ANY WRITE
-      const user = auth.currentUser;
-      if (!user) {
-        console.error("Not authenticated");
-        alert("SESSION_EXPIRED: Please re-authenticate.");
-        return;
-      }
-
-      // Sanitize data
-      const cleanData = Object.fromEntries(
-        Object.entries(editingHero).filter(([_, v]) => v !== undefined)
-      );
-
-      // Ensure hero is saved in: settings -> hero
-      // We'll use the category as part of the ID if it's a category hero, 
-      // or just 'hero' if it's the main one.
-      const docId = editingHero.id || (editingHero.category === 'MAIN' ? 'hero' : `hero_${editingHero.category}`);
-      
-      await setDoc(doc(db, 'settings', docId), {
-        ...cleanData,
-        updatedAt: new Date().toISOString()
-      }, { merge: true });
-
-      setEditingHero(null);
-      // Re-fetch from settings collection
-      const updatedSnap = await getDocs(collection(db, 'settings'));
-      const heroList = updatedSnap.docs
-        .filter(d => d.id === 'hero' || d.id.startsWith('hero_'))
-        .map(d => ({ id: d.id, ...d.data() } as HeroSection))
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      setHeros(heroList);
-      alert('Hero Manifest Synchronized');
+      const newMedia = { ...categoryMedia, [category]: { url, type } };
+      await setDoc(doc(db, 'settings', 'categoryMedia'), newMedia);
+      setCategoryMedia(newMedia);
+      alert(`${category.toUpperCase()} Media Synchronized`);
     } catch (error: any) {
-      console.error("Save failed:", error);
-      alert(`Save Failed: ${error.message || 'Unknown error'}`);
-    } finally { 
-      setSaving(false); 
+      alert(`Save Failed: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Destroy this hero manifest?')) return;
-    
-    try {
-      await auth.currentUser?.getIdToken(true);
-      if (!auth.currentUser) return;
-      
-      await deleteDoc(doc(db, 'settings', id));
-      setHeros(heros.filter(h => h.id !== id));
-    } catch (error: any) {
-      alert(`Delete failed: ${error.message}`);
-    }
-  };
-
-  if (loading) return <div className="py-20 text-center font-tech text-xs text-accent">RECONSTRUCTING_HERO_CORE...</div>;
+  if (loading) return <div className="py-20 text-center font-tech text-xs text-accent">RECONSTRUCTING_MEDIA_CORE...</div>;
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-      {showPicker && (
+      {showPicker && editingCategory && (
         <AssetPicker 
           onSelect={(url) => { 
-            setEditingHero(h => h ? ({ 
-              ...h, 
-              backgroundUrl: url, 
-              backgroundType: url.endsWith('.mp4') ? 'video' : 'image' 
-            }) : null); 
-            setShowPicker(false); 
+            handleSaveMedia(editingCategory, url, url.endsWith('.mp4') ? 'video' : 'image');
+            setShowPicker(false);
+            setEditingCategory(null);
           }} 
-          onClose={() => setShowPicker(false)} 
+          onClose={() => { setShowPicker(false); setEditingCategory(null); }} 
         />
       )}
 
       <header className="flex justify-between items-end mb-12">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_CMS</h2>
-          <button 
-            onClick={async () => {
-              console.log("DEBUG: Testing Firestore Write...");
-              console.log("Project ID:", db.app.options.projectId);
-              console.log("Current User:", auth.currentUser?.uid || "Not Signed In");
-              try {
-                const testRef = await addDoc(collection(db, "test_writes"), { 
-                  timestamp: new Date().toISOString(),
-                  user: auth.currentUser?.uid || "anonymous"
-                });
-                console.log("DEBUG: Test Write Success! Doc ID:", testRef.id);
-                alert("DEBUG: Test Write SUCCESS! See console for details.");
-              } catch (err: any) {
-                console.error("DEBUG: Test Write FAILED:", err.code, err.message, err);
-                alert(`DEBUG: Test Write FAILED: ${err.message}`);
-              }
-            }}
-            className="text-[8px] font-tech text-accent/40 hover:text-accent underline uppercase text-left"
-          >
-            [ RUN_ISOLATION_TEST ]
-          </button>
+        <div>
+          <h2 className="text-4xl font-black italic uppercase tracking-tighter">CATEGORY_MEDIA</h2>
+          <p className="text-[10px] font-tech text-white/20 mt-2">ASSIGN VISUALS TO PRODUCT FLOWS</p>
         </div>
-        <button 
-          onClick={() => setEditingHero({
-            category: categories[0] || 'GENERAL',
-            title: 'NEW HERO',
-            backgroundType: 'image',
-            backgroundUrl: '',
-            textColor: '#ffffff',
-            fontSize: '80px',
-            fontWeight: '700',
-            textAlign: 'center',
-            fontFamily: 'Inter',
-            order: heros.length + 1
-          })}
-          className="bg-accent text-black px-6 py-3 font-black text-[10px] tracking-widest uppercase"
-        >
-          NEW MANIFEST
-        </button>
       </header>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-12">
-        {/* Hero List */}
-        <div className="space-y-4">
-          <h3 className="text-xl font-black italic uppercase mb-8">ACTIVE_HEROS</h3>
-          {heros.map(h => (
-            <div key={h.id} className="bg-surface/20 border border-white/5 p-6 flex gap-6 group hover:border-accent/30 transition-all">
-              <div className="w-32 aspect-video bg-black border border-white/10 overflow-hidden shrink-0 relative">
-                {h.backgroundType === 'video' ? (
-                  <video src={h.backgroundUrl} className="w-full h-full object-cover" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {categories.map(cat => {
+          const media = categoryMedia[cat];
+          return (
+            <div key={cat} className="bg-surface/20 border border-white/5 p-6 flex flex-col gap-4 group hover:border-accent/30 transition-all">
+              <div className="flex justify-between items-start">
+                <h3 className="font-black italic uppercase text-lg">{cat}</h3>
+                <span className="text-[8px] font-tech text-accent/40">FLOW_BLOCK</span>
+              </div>
+
+              <div className="relative aspect-video bg-black border border-white/10 overflow-hidden flex items-center justify-center">
+                {media ? (
+                  media.type === 'video' ? (
+                    <video src={media.url} className="w-full h-full object-cover opacity-60" autoPlay loop muted />
+                  ) : (
+                    <img src={media.url} className="w-full h-full object-cover opacity-60" />
+                  )
                 ) : (
-                  <img src={h.backgroundUrl} className="w-full h-full object-cover" />
+                  <div className="text-[10px] font-tech text-white/10 uppercase tracking-widest">No Media Assigned</div>
                 )}
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                  <span className="text-[8px] font-tech text-white/60">{h.category}</span>
-                </div>
-              </div>
-              <div className="flex-1">
-                <div className="flex justify-between items-start">
-                  <h4 className="font-black italic uppercase text-lg">{h.title}</h4>
-                  <div className="flex gap-2">
-                    <button onClick={() => setEditingHero(h)} className="p-2 text-white/20 hover:text-accent transition-colors"><Edit2 size={16} /></button>
-                    <button onClick={() => handleDelete(h.id)} className="p-2 text-white/20 hover:text-red-500 transition-colors"><Trash2 size={16} /></button>
-                  </div>
-                </div>
-                <div className="mt-2 flex gap-4 text-[9px] font-tech text-white/40 uppercase">
-                  <span>ORDER: {h.order}</span>
-                  <span>STYLE: {h.fontFamily} / {h.fontSize}</span>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Editor */}
-        <AnimatePresence>
-          {editingHero && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }} 
-              animate={{ opacity: 1, y: 0 }} 
-              exit={{ opacity: 0, y: 20 }}
-              className="bg-surface/30 border border-white/5 p-8 rounded-2xl h-fit sticky top-8"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h3 className="text-xl font-black italic uppercase">MANIFEST_EDITOR</h3>
-                <button onClick={() => setEditingHero(null)}><X size={20} /></button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Live Preview */}
-                <div className="relative aspect-video bg-black border border-white/10 overflow-hidden flex items-center justify-center">
-                  <div className="absolute inset-0">
-                    {editingHero.backgroundType === 'video' ? (
-                      <video src={editingHero.backgroundUrl} className="w-full h-full object-cover opacity-50" autoPlay loop muted />
-                    ) : (
-                      <img src={editingHero.backgroundUrl} className="w-full h-full object-cover opacity-50" />
-                    )}
-                  </div>
-                  <div 
-                    className="relative z-10 p-4 w-full"
-                    style={{
-                      color: editingHero.textColor,
-                      fontSize: `calc(${editingHero.fontSize} * 0.3)`,
-                      fontWeight: editingHero.fontWeight,
-                      textAlign: editingHero.textAlign,
-                      fontFamily: editingHero.fontFamily
-                    }}
-                  >
-                    <div className="uppercase leading-tight">{editingHero.title || 'PREVIEW_TITLE'}</div>
-                    <div className="text-[0.4em] mt-2 opacity-80">{editingHero.subtitle || 'SUBTITLE_PREVIEW'}</div>
-                  </div>
-                  
-                  {/* Media Controls */}
-                  <div className="absolute bottom-4 right-4 flex gap-2">
+                
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm">
+                   <div className="flex gap-2">
                     <button 
-                      onClick={() => setShowPicker(true)} 
-                      className="bg-accent text-black p-2 rounded-full shadow-xl hover:scale-110 transition-transform"
-                      title="Select from Library"
+                      onClick={() => { setEditingCategory(cat); setShowPicker(true); }}
+                      className="bg-accent text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase hover:scale-105 transition-transform"
                     >
-                      <Database size={16} />
+                      {media ? 'REPLACE' : 'ASSIGN'}
                     </button>
-                    <label 
-                      className="bg-white text-black p-2 rounded-full shadow-xl cursor-pointer hover:scale-110 transition-transform"
-                      title="Upload New Asset"
-                    >
-                      <Upload size={16} />
+                    <label className="bg-white text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase cursor-pointer hover:scale-105 transition-transform">
+                      UPLOAD
                       <input 
                         type="file" 
                         className="hidden" 
@@ -1108,12 +927,8 @@ export function HeroManager() {
                           setSaving(true);
                           try {
                             const file = e.target.files[0];
-                            const url = await uploadFile(file, `heros/${Date.now()}_${file.name}`);
-                            setEditingHero(h => h ? ({ 
-                              ...h, 
-                              backgroundUrl: url, 
-                              backgroundType: file.type.startsWith('video') ? 'video' : 'image' 
-                            }) : null);
+                            const url = await uploadFile(file, `category_media/${Date.now()}_${file.name}`);
+                            await handleSaveMedia(cat, url, file.type.startsWith('video') ? 'video' : 'image');
                           } catch (err) {
                             alert('Upload failed');
                           } finally {
@@ -1124,100 +939,17 @@ export function HeroManager() {
                     </label>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Category</label>
-                    <select 
-                      value={editingHero.category} 
-                      onChange={e => setEditingHero({...editingHero, category: e.target.value})}
-                      className="w-full bg-black border border-white/10 p-4 font-black uppercase text-accent outline-none"
-                    >
-                      {categories.map(cat => <option key={cat}>{cat}</option>)}
-                      <option>GENERAL</option>
-                    </select>
-                  </div>
-                  <Input label="Order (Lower = First)" type="number" value={editingHero.order?.toString() || '0'} onChange={v => setEditingHero({...editingHero, order: parseInt(v)})} />
-                </div>
-
-                <Input label="Title" value={editingHero.title || ''} onChange={v => setEditingHero({...editingHero, title: v})} />
-                <Input label="Subtitle" value={editingHero.subtitle || ''} onChange={v => setEditingHero({...editingHero, subtitle: v})} />
-
-                <div className="grid grid-cols-2 gap-4">
-                  <Input label="Font Size (e.g. 120px)" value={editingHero.fontSize || ''} onChange={v => setEditingHero({...editingHero, fontSize: v})} />
-                  <div className="space-y-2">
-                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Text Color</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="color" 
-                        value={editingHero.textColor || '#ffffff'} 
-                        onChange={e => setEditingHero({...editingHero, textColor: e.target.value})}
-                        className="w-12 h-12 bg-black border border-white/10 p-1 cursor-pointer"
-                      />
-                      <input 
-                        type="text" 
-                        value={editingHero.textColor || '#ffffff'} 
-                        onChange={e => setEditingHero({...editingHero, textColor: e.target.value})}
-                        className="flex-1 bg-black border border-white/10 p-3 font-tech text-xs text-accent outline-none"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Weight</label>
-                    <select 
-                      value={editingHero.fontWeight} 
-                      onChange={e => setEditingHero({...editingHero, fontWeight: e.target.value})}
-                      className="w-full bg-black border border-white/10 p-3 font-black uppercase text-accent outline-none"
-                    >
-                      <option value="300">Light</option>
-                      <option value="400">Normal</option>
-                      <option value="700">Bold</option>
-                      <option value="900">Black</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Family</label>
-                    <select 
-                      value={editingHero.fontFamily} 
-                      onChange={e => setEditingHero({...editingHero, fontFamily: e.target.value})}
-                      className="w-full bg-black border border-white/10 p-3 font-black uppercase text-accent outline-none"
-                    >
-                      <option value="Inter">Inter</option>
-                      <option value="Anton">Anton</option>
-                      <option value="Space Grotesk">Space Grotesk</option>
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="font-tech text-[10px] tracking-widest text-white/30 uppercase">Align</label>
-                    <div className="flex bg-black border border-white/10">
-                      {(['left', 'center', 'right'] as const).map(align => (
-                        <button 
-                          key={align}
-                          onClick={() => setEditingHero({...editingHero, textAlign: align})}
-                          className={`flex-1 p-3 text-[10px] font-black uppercase transition-colors ${editingHero.textAlign === align ? 'bg-accent text-black' : 'text-white/40'}`}
-                        >
-                          {align[0]}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <button 
-                  disabled={saving}
-                  onClick={handleSave} 
-                  className="w-full bg-accent text-black py-4 font-black uppercase tracking-[0.3em] flex items-center justify-center gap-4 disabled:opacity-50"
-                >
-                  {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
-                  SAVE_MANIFEST
-                </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+              <div className="flex items-center gap-2 mt-auto">
+                <div className={`w-1.5 h-1.5 rounded-full ${media ? 'bg-green-500' : 'bg-red-500/20'}`} />
+                <span className="text-[9px] font-tech text-white/30 uppercase">
+                  {media ? `MANIFESTED: ${media.type}` : 'PENDING_ASSIGNMENT'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </motion.div>
   );

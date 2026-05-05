@@ -3,25 +3,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
 import RunwayProducts from '../components/home/RunwayProducts';
 import { db } from '../lib/firebase';
-import { doc, onSnapshot, collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { onSnapshot, collection } from 'firebase/firestore';
 import { fetchProducts, Product } from '../data/products';
 import { Loader2, ChevronRight } from 'lucide-react';
-
-interface HeroSection {
-  id: string;
-  category: string;
-  title: string;
-  subtitle?: string;
-  backgroundType: 'image' | 'video';
-  backgroundUrl: string;
-  textColor: string;
-  fontSize: string;
-  fontWeight: string;
-  textAlign: 'left' | 'center' | 'right';
-  fontFamily: string;
-  order: number;
-  createdAt: string;
-}
 
 interface HeroSettings {
   title: string;
@@ -155,8 +139,7 @@ export default function Home() {
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
-  const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({});
-  const [heroMap, setHeroMap] = useState<Record<string, HeroSection>>({});
+  const [categoryMedia, setCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
   const [loading, setLoading] = useState(true);
   const activeHeroRef = useRef<HeroSettings | null>(null);
 
@@ -180,23 +163,19 @@ export default function Home() {
     loadProducts();
   }, []);
 
-  // Live updates for all heroes (Main and Category) from settings collection
+  // Live updates for all settings (Main Hero and Category Media)
   useEffect(() => {
-    const q = query(collection(db, 'settings'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allSettings = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as any));
+    const unsubscribe = onSnapshot(collection(db, 'settings'), (snapshot) => {
+      const allSettings = snapshot.docs.reduce((acc, doc) => {
+        acc[doc.id] = doc.data();
+        return acc;
+      }, {} as any);
       
-      // 1. Create Hero Map for categories
-      const hMap: Record<string, HeroSection> = {};
-      allSettings.forEach(d => {
-        if (d.id.startsWith('hero_') && d.category) {
-          hMap[d.category] = d as HeroSection;
-        }
-      });
-      setHeroMap(hMap);
+      // 1. Set Category Media Map
+      setCategoryMedia(allSettings.categoryMedia || {});
 
       // 2. Update Main Hero
-      const mainHeroDoc = allSettings.find(d => d.id === 'hero');
+      const mainHeroDoc = allSettings.hero;
       if (mainHeroDoc) {
         const data = mainHeroDoc;
         const newData: HeroSettings = {
@@ -266,6 +245,21 @@ export default function Home() {
 
   return (
     <div className="bg-black">
+      <style>{`
+        .category-media {
+          width: 100%;
+          height: 70vh;
+          margin: 40px 0;
+          overflow: hidden;
+        }
+        .category-media img,
+        .category-media video {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      `}</style>
+
       {/* Main Hero Section */}
       <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
@@ -358,7 +352,7 @@ export default function Home() {
         </div>
       </section>
       
-      {/* Dynamic Content: Category Products -> Category Hero */}
+      {/* Dynamic Content: Category Products -> Category Media */}
       <div className="relative z-30 bg-black">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-accent font-tech">
@@ -368,9 +362,7 @@ export default function Home() {
         ) : (
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
-            const hero = heroMap[cat];
-
-            console.log(`RENDER_LOG: Category: ${cat} | Hero Found: ${!!hero}`);
+            const media = categoryMedia[cat];
 
             return (
               <React.Fragment key={cat}>
@@ -391,58 +383,21 @@ export default function Home() {
                   />
                 </div>
 
-                {/* Category Hero Section */}
-                {hero && (
-                  <section className="relative h-[80vh] w-full overflow-hidden flex items-center justify-center bg-black">
-                    <div className="absolute inset-0 w-full h-full">
-                      {hero.backgroundType === 'video' ? (
-                        <video
-                          autoPlay loop muted playsInline
-                          className="w-full h-full object-cover brightness-[0.5]"
-                          src={hero.backgroundUrl}
-                        />
-                      ) : (
-                        <img
-                          src={hero.backgroundUrl}
-                          className="w-full h-full object-cover brightness-[0.5]"
-                          alt={hero.category}
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black" />
-                    </div>
-                    
-                    <div 
-                      className="relative z-10 px-6 w-full max-w-7xl mx-auto"
-                      style={{ textAlign: hero.textAlign }}
-                    >
-                      <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-                        viewport={{ once: true }}
-                      >
-                        <span className="font-tech text-xs tracking-[0.5em] text-accent uppercase mb-6 block italic opacity-70">
-                          {hero.category}_SERIES
-                        </span>
-                        <h2 
-                          className="uppercase italic tracking-tighter leading-[0.85]"
-                          style={{ 
-                            color: hero.textColor,
-                            fontSize: `clamp(4rem, 10vw, ${hero.fontSize})`,
-                            fontWeight: hero.fontWeight,
-                            fontFamily: hero.fontFamily === 'Anton' ? 'Playfair Display' : hero.fontFamily
-                          }}
-                        >
-                          {hero.title}
-                        </h2>
-                        {hero.subtitle && (
-                          <p className="mt-8 font-tech text-sm tracking-[0.2em] uppercase opacity-40 max-w-xl inline-block">
-                            {hero.subtitle}
-                          </p>
-                        )}
-                      </motion.div>
-                    </div>
-                  </section>
+                {/* Simplified Media Block (ALWAYS BELOW PRODUCTS) */}
+                {media && (
+                  <div className="category-media">
+                    {media.type === "video" ? (
+                      <video
+                        src={media.url}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                      />
+                    ) : (
+                      <img src={media.url} alt={cat} />
+                    )}
+                  </div>
                 )}
               </React.Fragment>
             );
