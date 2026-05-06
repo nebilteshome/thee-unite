@@ -236,8 +236,9 @@ export default function Home() {
   return (
     <div className="bg-black text-white min-h-screen">
       <style>{`
-        .category-media { width: 100%; height: 70vh; margin: 0; overflow: hidden; }
+        .category-media { width: 100%; height: 100vh; margin: 0; overflow: hidden; position: relative; }
         .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; }
+        .seamless-products { margin-top: 0; padding-top: 0; }
       `}</style>
 
       {/* Main Hero Section */}
@@ -303,31 +304,36 @@ export default function Home() {
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
             const media = categoryMedia[cat];
+
             return (
               <React.Fragment key={cat}>
-                {/* Simplified Media Block (Link to Collection Category) */}
-                {media && (
-                  <Link 
-                    to={`/collection?category=${encodeURIComponent(cat)}`}
-                    className="category-media relative group block cursor-pointer"
-                  >
-                    {media.type === "video" ? (
-                      <video src={media.url} autoPlay loop muted playsInline />
+                {/* Category Media Block (100vh - Same as Hero) */}
+                <Link 
+                  to={`/collection?category=${encodeURIComponent(cat)}`}
+                  className="category-media group block cursor-pointer"
+                >
+                  {media ? (
+                    media.type === "video" ? (
+                      <video src={media.url} autoPlay loop muted playsInline className="brightness-75" />
                     ) : (
-                      <img src={media.url} alt={cat} />
-                    )}
-                    
-                    {/* Transparent 'SHOP' Box Overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
-                      <div className="border border-white/30 bg-black/10 backdrop-blur-md px-10 py-4 font-black uppercase text-sm tracking-[0.4em] text-white hover:bg-white hover:text-black transition-all">
-                        SHOP
-                      </div>
+                      <img src={media.url} alt={cat} className="brightness-75" />
+                    )
+                  ) : (
+                    <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
+                       <span className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{cat}_VISUAL_PENDING</span>
                     </div>
-                  </Link>
-                )}
+                  )}
+                  
+                  {/* Transparent 'SHOP' Box Overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors z-10">
+                    <div className="border border-white/30 bg-black/20 backdrop-blur-md px-12 py-5 font-black uppercase text-sm tracking-[0.5em] text-white hover:bg-white hover:text-black transition-all">
+                      SHOP {cat}
+                    </div>
+                  </div>
+                </Link>
 
-                {/* Category Products (Seamless below media) */}
-                <div className="bg-black">
+                {/* Category Products (Seamlessly below) */}
+                <div className="bg-black seamless-products py-0">
                   <RunwayProducts products={products} showCart={index === categories.length - 1} />
                 </div>
               </React.Fragment>
