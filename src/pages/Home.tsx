@@ -250,13 +250,13 @@ export default function Home() {
   return (
     <div className="bg-black text-white min-h-screen">
       <style>{`
-        .category-media { width: 100%; height: 100vh; margin: 0; overflow: hidden; position: relative; }
-        .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; }
+        .category-media { width: 100%; min-height: 100vh; min-height: 100dvh; margin: 0; overflow: hidden; position: relative; }
+        .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .seamless-products { margin-top: 0; padding-top: 0; }
       `}</style>
 
       {/* Main Hero Section */}
-      <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
+      <section className="min-h-screen min-h-[100dvh] relative overflow-hidden flex items-center justify-center bg-black w-full">
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           <AnimatePresence mode="popLayout">
             <motion.div
@@ -268,26 +268,26 @@ export default function Home() {
               className="absolute inset-0 w-full h-full"
             >
               {activeHero.bgType === 'video' ? (
-                <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover brightness-[0.7]" src={activeHero.bgUrl} />
+                <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover object-center brightness-[0.7]" src={activeHero.bgUrl} />
               ) : (
-                <img src={activeHero.bgUrl} className="absolute inset-0 w-full h-full object-cover brightness-[0.8]" alt="Hero" />
+                <img src={activeHero.bgUrl} className="absolute inset-0 w-full h-full object-cover object-center brightness-[0.8]" alt="Hero" />
               )}
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/30 z-20" />
         </div>
 
-        <div className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-32">
+        <div className="relative z-30 text-center px-6 w-full h-full flex flex-col justify-end pb-24 md:pb-32">
           <div className="max-w-4xl mx-auto w-full">
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="font-tech text-xs tracking-[0.4em] uppercase text-white mb-4"
+              className="font-tech text-[8px] md:text-xs tracking-[0.4em] uppercase text-white mb-4"
             >
               {mainHero.tagline}
             </motion.p>
 
-            <div className="mb-8">
+            <div className="mb-8 md:mb-12">
               <TheeUniteReveal title={mainHero.title} onComplete={() => setVideoCanPlay(true)} />
             </div>
 
@@ -295,14 +295,14 @@ export default function Home() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.7 }}
-              className="flex flex-row items-center justify-center gap-4"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 px-4"
             >
-              <Link to="/collection" className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors">Shop Now</Link>
-              <Link to="/gallery" className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors">The Story</Link>
+              <Link to="/collection" className="w-full sm:min-w-[160px] sm:w-auto py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors text-center">Shop Now</Link>
+              <Link to="/gallery" className="w-full sm:min-w-[160px] sm:w-auto py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors text-center">The Story</Link>
             </motion.div>
           </div>
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="absolute bottom-8 left-1/2 -translate-x-1/2">
-            <div className="w-1 h-12 bg-gradient-to-b from-white to-transparent opacity-20" />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2">
+            <div className="w-1 h-8 md:h-12 bg-gradient-to-b from-white to-transparent opacity-20" />
           </motion.div>
         </div>
       </section>

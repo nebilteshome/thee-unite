@@ -122,10 +122,10 @@ export default function Shop() {
         </button>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-20">
+      <div className="flex flex-col lg:flex-row gap-12 lg:gap-20">
         {/* Product Images */}
         <div className="w-full lg:w-3/5 space-y-6">
-          <div className="aspect-[4/5] bg-surface relative overflow-hidden group border border-white/5 accent-glow">
+          <div className="aspect-[4/5] sm:aspect-square lg:aspect-[4/5] bg-surface relative overflow-hidden group border border-white/5 accent-glow">
             <AnimatePresence mode="wait">
               <motion.img 
                 key={activeImageIndex}
@@ -135,30 +135,30 @@ export default function Shop() {
                 transition={{ duration: 0.5 }}
                 src={images[activeImageIndex]} 
                 alt={product.name} 
-                className="w-full h-full object-cover transition-all duration-1000"
+                className="w-full h-full object-cover object-center transition-all duration-1000"
                 referrerPolicy="no-referrer"
               />
             </AnimatePresence>
             
             {images.length > 1 && (
-              <div className="absolute inset-0 flex items-center justify-between p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="absolute inset-0 flex items-center justify-between p-2 md:p-4 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => setActiveImageIndex((i) => (i > 0 ? i - 1 : images.length - 1))}
-                  className="p-4 bg-black/40 backdrop-blur-md text-white hover:text-accent transition-colors"
+                  className="p-3 md:p-4 bg-black/40 backdrop-blur-md text-white hover:text-accent transition-colors"
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft size={20} md:size={24} />
                 </button>
                 <button 
                   onClick={() => setActiveImageIndex((i) => (i < images.length - 1 ? i + 1 : 0))}
-                  className="p-4 bg-black/40 backdrop-blur-md text-white hover:text-accent transition-colors"
+                  className="p-3 md:p-4 bg-black/40 backdrop-blur-md text-white hover:text-accent transition-colors"
                 >
-                  <ChevronRight size={24} />
+                  <ChevronRight size={20} md:size={24} />
                 </button>
               </div>
             )}
 
-            <div className="absolute top-8 left-8">
-              <span className="bg-accent text-black px-4 py-2 text-xs font-black uppercase italic tracking-widest">
+            <div className="absolute top-4 left-4 md:top-8 md:left-8">
+              <span className="bg-accent text-black px-3 py-1 md:px-4 md:py-2 text-[10px] md:text-xs font-black uppercase italic tracking-widest">
                 {product.category}_SERIES
               </span>
             </div>
@@ -166,7 +166,7 @@ export default function Shop() {
 
           {/* Thumbnails */}
           {images.length > 1 && (
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-4 gap-2 md:gap-4">
               {images.map((img, i) => (
                 <button 
                   key={i} 
@@ -181,16 +181,16 @@ export default function Shop() {
         </div>
 
         {/* Product Details */}
-        <div className="w-full lg:w-2/5 space-y-12">
+        <div className="w-full lg:w-2/5 space-y-8 md:space-y-12">
           <div>
             <div className="flex items-center gap-4 mb-4">
-              <span className="font-tech text-xs tracking-[0.4em] text-accent font-black italic">MANIFEST_ID: {product.id.slice(0, 8)}</span>
-              <div className="h-px w-12 bg-accent/20" />
+              <span className="font-tech text-[10px] md:text-xs tracking-[0.4em] text-accent font-black italic">MANIFEST_ID: {product.id.slice(0, 8)}</span>
+              <div className="h-px w-8 md:w-12 bg-accent/20" />
             </div>
-            <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-6">
+            <h1 className="text-5xl sm:text-6xl md:text-8xl font-black uppercase tracking-tighter leading-[0.8] mb-6">
               {product.name}
             </h1>
-            <p className="text-4xl font-black text-accent italic">${product.price}</p>
+            <p className="text-3xl md:text-4xl font-black text-accent italic">${product.price}</p>
           </div>
 
           <div className="space-y-10">

@@ -224,14 +224,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 right-0 h-full w-full max-w-md bg-neutral-900 z-[101] flex flex-col border-l border-white/10 shadow-2xl"
+              className="fixed top-0 right-0 h-full w-full sm:max-w-md bg-neutral-900 z-[101] flex flex-col border-l border-white/10 shadow-2xl"
             >
-              <div className="p-8 border-b border-white/10 flex items-center justify-between bg-black/50 backdrop-blur-md sticky top-0 z-10">
+              <div className="p-6 md:p-8 border-b border-white/10 flex items-center justify-between bg-black/50 backdrop-blur-md sticky top-0 z-10">
                 <div>
-                  <h3 className="font-tech text-[10px] tracking-[0.3em] uppercase text-accent mb-1 underline underline-offset-4 decoration-accent/30">
+                  <h3 className="font-tech text-[8px] md:text-[10px] tracking-[0.3em] uppercase text-accent mb-1 underline underline-offset-4 decoration-accent/30">
                     {isCheckoutMode ? 'Fulfillment Data' : 'Your Frequency'}
                   </h3>
-                  <p className="text-2xl font-black italic uppercase tracking-tighter">
+                  <p className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">
                     {isCheckoutMode ? 'Shipping Info' : 'Shopping Bag'}
                   </p>
                 </div>
@@ -242,19 +242,19 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       className="p-2 hover:bg-white/10 rounded-full transition-colors text-accent"
                       title="Return to Bag"
                     >
-                      <ArrowUpRight size={24} className="rotate-[225deg]" />
+                      <ArrowUpRight size={20} className="rotate-[225deg]" />
                     </button>
                   )}
                   <button 
                     onClick={() => cartStore.setIsOpen(false)}
                     className="p-2 hover:bg-white/10 rounded-full transition-colors"
                   >
-                    <X size={24} />
+                    <X size={20} />
                   </button>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-8 space-y-8">
+              <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8">
                 {isCheckoutMode ? (
                   <form className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
                     <div className="space-y-2">
@@ -263,7 +263,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         type="text" 
                         value={shippingDetails.fullName}
                         onChange={e => setShippingDetails({...shippingDetails, fullName: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors text-xs"
                         placeholder="ENTER NAME..."
                       />
                     </div>
@@ -273,7 +273,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         type="email" 
                         value={shippingDetails.email}
                         onChange={e => setShippingDetails({...shippingDetails, email: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors text-xs"
                         placeholder="ENTER EMAIL..."
                       />
                     </div>
@@ -283,7 +283,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         type="tel" 
                         value={shippingDetails.phone}
                         onChange={e => setShippingDetails({...shippingDetails, phone: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors text-xs"
                         placeholder="+000 000 000"
                       />
                     </div>
@@ -292,18 +292,18 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                       <textarea 
                         value={shippingDetails.address}
                         onChange={e => setShippingDetails({...shippingDetails, address: e.target.value})}
-                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors min-h-[100px]"
+                        className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors min-h-[100px] text-xs"
                         placeholder="STREET, HOUSE, ETC..."
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="font-tech text-[9px] tracking-widest text-white/30 uppercase">City</label>
                         <input 
                           type="text" 
                           value={shippingDetails.city}
                           onChange={e => setShippingDetails({...shippingDetails, city: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors"
+                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors text-xs"
                           placeholder="CITY..."
                         />
                       </div>
@@ -312,7 +312,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                         <select 
                           value={shippingDetails.country}
                           onChange={e => setShippingDetails({...shippingDetails, country: e.target.value})}
-                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors appearance-none"
+                          className="w-full bg-white/5 border border-white/10 p-4 font-black uppercase text-accent outline-none focus:border-accent transition-colors appearance-none text-xs"
                         >
                           <option value="Ghana">Ghana</option>
                           <option value="Nigeria">Nigeria</option>
@@ -324,55 +324,55 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 ) : (
                   cartItems.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-30">
-                      <ShoppingBag size={64} strokeWidth={1} />
-                      <p className="font-tech text-xs tracking-widest uppercase italic">Your bag is currently void</p>
+                      <ShoppingBag size={48} md:size={64} strokeWidth={1} />
+                      <p className="font-tech text-[10px] md:text-xs tracking-widest uppercase italic">Your bag is currently void</p>
                       <Link 
                         to="/collection" 
                         onClick={() => cartStore.setIsOpen(false)}
-                        className="text-accent underline underline-offset-8 decoration-accent/30 font-black text-xs tracking-widest"
+                        className="text-accent underline underline-offset-8 decoration-accent/30 font-black text-[10px] md:text-xs tracking-widest"
                       >
                         ENTER THE DOMAIN
                       </Link>
                     </div>
                   ) : (
                     cartItems.map((item) => (
-                      <div key={item.id} className="flex gap-6 group animate-in fade-in slide-in-from-left-4 duration-500">
-                        <div className="w-24 aspect-[3/4] bg-surface flex-shrink-0 overflow-hidden border border-white/5 relative">
+                      <div key={item.id} className="flex gap-4 md:gap-6 group animate-in fade-in slide-in-from-left-4 duration-500">
+                        <div className="w-20 md:w-24 aspect-[3/4] bg-surface flex-shrink-0 overflow-hidden border border-white/5 relative">
                           <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 flex flex-col justify-between py-1">
                           <div>
                             <div className="flex justify-between items-start mb-2">
-                              <h4 className="font-black uppercase tracking-tighter text-lg">{item.name}</h4>
-                              <span className="font-tech text-xs text-accent">${item.price}</span>
+                              <h4 className="font-black uppercase tracking-tighter text-base md:text-lg">{item.name}</h4>
+                              <span className="font-tech text-[10px] md:text-xs text-accent">${item.price}</span>
                             </div>
-                            <div className="flex gap-4 text-[10px] items-center text-white/40 font-tech uppercase tracking-widest">
+                            <div className="flex gap-4 text-[9px] md:text-[10px] items-center text-white/40 font-tech uppercase tracking-widest">
                               <span>Size: {item.size}</span>
                               <span className="w-1 h-1 bg-white/20 rounded-full" />
                               <span>Color: {item.color}</span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 bg-black/50 p-1 border border-white/10">
+                            <div className="flex items-center gap-3 md:gap-4 bg-black/50 p-1 border border-white/10">
                               <button 
                                 onClick={() => cartStore.updateQuantity(item.id, -1)}
                                 className="p-1 hover:text-accent transition-colors"
                               >
-                                <Minus size={14} />
+                                <Minus size={12} md:size={14} />
                               </button>
-                              <span className="font-tech text-xs w-4 text-center">{item.quantity}</span>
+                              <span className="font-tech text-[10px] md:text-xs w-4 text-center">{item.quantity}</span>
                               <button 
                                 onClick={() => cartStore.updateQuantity(item.id, 1)}
                                 className="p-1 hover:text-accent transition-colors"
                               >
-                                <Plus size={14} />
+                                <Plus size={12} md:size={14} />
                               </button>
                             </div>
                             <button 
                               onClick={() => cartStore.removeItem(item.id)}
                               className="text-white/20 hover:text-red-500 transition-colors"
                             >
-                              <Trash2 size={16} />
+                              <Trash2 size={14} md:size={16} />
                             </button>
                           </div>
                         </div>
@@ -383,31 +383,31 @@ export default function Layout({ children }: { children: React.ReactNode }) {
               </div>
 
               {cartItems.length > 0 && (
-                <div className="p-8 bg-black border-t border-white/10 space-y-6">
+                <div className="p-6 md:p-8 bg-black border-t border-white/10 space-y-6">
                   <div className="flex justify-between items-end">
-                    <span className="font-tech text-[10px] tracking-[0.4em] uppercase text-white/40 italic flex items-center gap-4">
+                    <span className="font-tech text-[8px] md:text-[10px] tracking-[0.4em] uppercase text-white/40 italic flex items-center gap-4">
                       Subtotal manifest <div className="h-px w-8 bg-white/10" />
                     </span>
-                    <span className="text-3xl font-black italic tracking-tighter">${subtotal}</span>
+                    <span className="text-2xl md:text-3xl font-black italic tracking-tighter">${subtotal}</span>
                   </div>
                   <button 
                     onClick={() => handleCheckout()}
                     disabled={isProcessing}
-                    className="w-full bg-accent text-black py-6 font-black uppercase text-sm tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-white transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full bg-accent text-black py-4 md:py-6 font-black uppercase text-[12px] md:text-sm tracking-[0.3em] flex items-center justify-center gap-4 hover:bg-white transition-all transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isProcessing ? (
                       <>
-                        Synchronizing <Loader2 className="animate-spin" size={18} />
+                        Synchronizing <Loader2 className="animate-spin" size={16} md:size={18} />
                       </>
                     ) : (
                       isCheckoutMode ? (
-                        <>FINALIZE MANIFEST <ArrowUpRight size={18} /></>
+                        <>FINALIZE MANIFEST <ArrowUpRight size={16} md:size={18} /></>
                       ) : (
-                        <>INITIATE FULFILLMENT <ArrowUpRight size={18} /></>
+                        <>INITIATE FULFILLMENT <ArrowUpRight size={16} md:size={18} /></>
                       )
                     )}
                   </button>
-                  <p className="text-[9px] text-center text-white/20 font-tech uppercase tracking-widest">
+                  <p className="text-[8px] md:text-[9px] text-center text-white/20 font-tech uppercase tracking-widest">
                     {isCheckoutMode ? 'Confirming manifest will finalize the order.' : 'Taxes and shipping calculated at final manifest.'}
                   </p>
                 </div>

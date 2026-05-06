@@ -210,7 +210,7 @@ export default function Gallery() {
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        <header className="mb-24 relative min-h-[70vh] flex flex-col justify-center overflow-hidden rounded-3xl border border-white/5 bg-surface/20">
+        <header className="mb-12 md:mb-24 relative min-h-[50vh] md:min-h-[70vh] flex flex-col justify-center overflow-hidden rounded-2xl md:rounded-3xl border border-white/5 bg-surface/20">
           {/* Hero Background */}
           <div className="absolute inset-0 z-0">
             {hero.bgType === 'video' ? (
@@ -220,30 +220,30 @@ export default function Gallery() {
                 loop
                 muted
                 playsInline
-                className={`w-full h-full object-cover transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-50' : 'opacity-0'}`}
+                className={`w-full h-full object-cover object-center transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-50' : 'opacity-0'}`}
               />
             ) : (
               <img 
                 src={hero.bgUrl}
-                className={`w-full h-full object-cover transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-50' : 'opacity-0'}`}
+                className={`w-full h-full object-cover object-center transition-opacity duration-[3000ms] ease-in-out ${videoCanPlay ? 'opacity-50' : 'opacity-0'}`}
                 onLoad={() => setVideoCanPlay(true)}
               />
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black" />
           </div>
 
-          <div className="relative z-10 p-8 md:p-16">
+          <div className="relative z-10 p-6 md:p-16">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.8 }}
               className="flex flex-col"
             >
-              <span className="font-tech text-accent tracking-[0.6em] text-xs uppercase mb-8 overflow-hidden inline-block">
+              <span className="font-tech text-accent tracking-[0.4em] md:tracking-[0.6em] text-[8px] md:text-xs uppercase mb-6 md:mb-8 overflow-hidden inline-block">
                 <CharacterReveal text="For every soul that dares to dream." />
               </span>
               
-              <div className="mb-8">
+              <div className="mb-6 md:mb-8">
                 <TheeUniteReveal title={hero.title} onComplete={() => setVideoCanPlay(true)} />
               </div>
               
@@ -251,7 +251,7 @@ export default function Gallery() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={videoCanPlay ? { opacity: 0.5, y: 0 } : { opacity: 0, y: 20 }}
                 transition={{ duration: 1, delay: 0.5 }}
-                className="font-tech text-xs tracking-[0.3em] uppercase max-w-md border-l border-accent/30 pl-6 py-2"
+                className="font-tech text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.3em] uppercase max-w-sm md:max-w-md border-l border-accent/30 pl-4 md:pl-6 py-2"
               >
                 {hero.subtitle}
               </motion.div>
@@ -261,13 +261,13 @@ export default function Gallery() {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 0.1 }}
-            className="absolute top-0 right-8 vertical-text font-tech text-white text-xs tracking-[1em] h-full hidden md:flex items-center"
+            className="absolute top-0 right-4 md:right-8 vertical-text font-tech text-white text-[8px] md:text-xs tracking-[1em] h-full hidden md:flex items-center"
           >
             SCROLL TO EXPLORE
           </motion.div>
         </header>
 
-        <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-6 space-y-6">
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 gap-4 md:gap-6 space-y-4 md:space-y-6">
           {items.map((item, index) => {
             const mediaUrl = item.url;
             if (!mediaUrl) return null;
@@ -278,10 +278,10 @@ export default function Gallery() {
                 layoutId={`media-${item.id}`}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
+                viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.6, delay: (index % 5) * 0.1 }}
                 onClick={() => setSelectedId(item.id)}
-                className="relative group cursor-pointer overflow-hidden rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-6 shadow-2xl"
+                className="relative group cursor-pointer overflow-hidden rounded-xl md:rounded-2xl bg-surface border border-white/5 break-inside-avoid mb-4 md:mb-6 shadow-2xl"
               >
                 {item.type === 'video' ? (
                   <video
@@ -290,7 +290,7 @@ export default function Gallery() {
                     loop
                     muted
                     playsInline
-                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
+                    className="w-full h-auto object-cover object-center group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                     onError={(e) => {
                       (e.target as HTMLVideoElement).style.display = 'none';
                     }}
@@ -300,7 +300,7 @@ export default function Gallery() {
                     src={mediaUrl}
                     alt={item.title || 'Manifest Data'}
                     loading="lazy"
-                    className="w-full h-auto group-hover:scale-[1.02] transition-transform duration-700 ease-out"
+                    className="w-full h-auto object-cover object-center group-hover:scale-[1.02] transition-transform duration-700 ease-out"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = 'https://placehold.co/600x800/black/accent?text=MANIFEST_DATA_UNAVAILABLE';
                     }}
