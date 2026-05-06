@@ -356,7 +356,7 @@ export default function Home() {
                   
                   {/* Transparent 'SHOP' Box Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors z-10">
-                    <div className="border border-white/30 bg-black/20 backdrop-blur-md px-12 py-5 font-black uppercase text-sm tracking-[0.5em] text-white hover:bg-white hover:text-black transition-all">
+                    <div className="min-w-[160px] py-4 px-8 border border-white/30 bg-black/20 backdrop-blur-md font-black uppercase text-[10px] tracking-[0.2em] text-white hover:bg-white hover:text-black transition-all text-center">
                       SHOP {cat}
                     </div>
                   </div>
