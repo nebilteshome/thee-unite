@@ -143,86 +143,100 @@ export default function Home() {
   
   const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({});
   const [categoryMedia, setCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
+  const [activeCategoryMedia, setActiveCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
+  
   const [loading, setLoading] = useState(true);
   const activeHeroRef = useRef<HeroSettings>(defaultHero);
 
   useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const prodData = await fetchProducts();
-        const grouped = prodData.reduce((acc, product) => {
-          const cat = product.category || 'GENERAL';
-          if (!acc[cat]) acc[cat] = [];
-          acc[cat].push(product);
-          return acc;
-        }, {} as Record<string, Product[]>);
-        setGroupedProducts(grouped);
-      } catch (error) {
-        console.error("Error loading products:", error);
-      }
-    };
-    loadProducts();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, 'settings'), (snapshot) => {
-      const allSettings = snapshot.docs.reduce((acc, doc) => {
-        acc[doc.id] = doc.data();
+    // 1. Listen for Products (Real-time Category List)
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const prodData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+      const grouped = prodData.reduce((acc, product) => {
+        const cat = product.category || 'GENERAL';
+        if (!acc[cat]) acc[cat] = [];
+        acc[cat].push(product);
         return acc;
-      }, {} as any);
-      
-      setCategoryMedia(allSettings.categoryMedia || {});
+      }, {} as Record<string, Product[]>);
+      setGroupedProducts(grouped);
+    });
 
-      const mainHeroDoc = allSettings.hero;
-      if (mainHeroDoc) {
-        const data = mainHeroDoc;
-        const newData: HeroSettings = {
-          title: data.title || defaultHero.title,
-          tagline: data.tagline || defaultHero.tagline,
-          subtitle: data.subtitle || defaultHero.subtitle,
-          bgUrl: data.backgroundUrl || data.bgUrl || defaultHero.bgUrl,
-          bgType: data.backgroundType || data.bgType || defaultHero.bgType
-        };
-        
-        const currentActive = activeHeroRef.current;
+    // 2. Listen for Settings (Hero and Category Media)
+    const unsubSettings = onSnapshot(collection(db, 'settings'), (snapshot) => {
+      snapshot.docs.forEach(doc => {
+        if (doc.id === 'categoryMedia') {
+          const newCategoryMedia = doc.data() as any;
+          setCategoryMedia(newCategoryMedia);
 
-        if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
-          preloadAsset(newData).then(() => {
-            setMainHero(newData);
-            setIsTransitioning(true);
-            setTimeout(() => {
-              setActiveHero(newData);
-              activeHeroRef.current = newData;
-              setIsTransitioning(false);
-            }, 1000);
+          // Apply preloading logic to each category media change
+          Object.entries(newCategoryMedia).forEach(([cat, media]: [string, any]) => {
+            const currentActive = activeCategoryMedia[cat];
+            if (!currentActive || media.url !== currentActive.url) {
+              preloadSingleAsset(media.url, media.type).then(() => {
+                setActiveCategoryMedia(prev => ({ ...prev, [cat]: media }));
+              });
+            }
           });
-        } else {
-          setMainHero(newData);
-          setActiveHero(newData);
-          activeHeroRef.current = newData;
+        } else if (doc.id === 'hero') {
+          const data = doc.data();
+          const newData: HeroSettings = {
+            title: data.title || defaultHero.title,
+            tagline: data.tagline || defaultHero.tagline,
+            subtitle: data.subtitle || defaultHero.subtitle,
+            bgUrl: data.bgUrl || data.backgroundUrl || defaultHero.bgUrl,
+            bgType: data.bgType || data.backgroundType || defaultHero.bgType
+          };
+          
+          const currentActive = activeHeroRef.current;
+
+          if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
+            preloadAsset(newData).then(() => {
+              setMainHero(newData);
+              setIsTransitioning(true);
+              setTimeout(() => {
+                setActiveHero(newData);
+                activeHeroRef.current = newData;
+                setIsTransitioning(false);
+              }, 1000);
+            });
+          } else {
+            setMainHero(newData);
+            setActiveHero(newData);
+            activeHeroRef.current = newData;
+          }
         }
-      }
-      
+      });
       setLoading(false);
     }, (error) => {
       console.error("Settings sync error:", error);
       setLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      unsubProducts();
+      unsubSettings();
+    };
   }, []);
 
   const preloadAsset = (settings: HeroSettings): Promise<void> => {
+    return preloadSingleAsset(settings.bgUrl, settings.bgType);
+  };
+
+  const preloadSingleAsset = (url: string, type: 'image' | 'video'): Promise<void> => {
     return new Promise((resolve) => {
-      if (settings.bgType === 'video') {
+      if (type === 'video') {
         const video = document.createElement('video');
-        video.src = settings.bgUrl;
+        video.src = url;
         video.oncanplaythrough = () => resolve();
         video.onerror = () => resolve();
+        // Timeout as fallback
+        setTimeout(resolve, 3000);
       } else {
         const img = new Image();
-        img.src = settings.bgUrl;
+        img.src = url;
         img.onload = () => resolve();
         img.onerror = () => resolve();
+        setTimeout(resolve, 3000);
       }
     });
   };
@@ -303,11 +317,12 @@ export default function Home() {
         ) : (
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
+            
             // Resilient lookup: try exact match, then case-insensitive match
-            const media = categoryMedia[cat] || 
-                          categoryMedia[cat.toUpperCase()] || 
-                          categoryMedia[cat.toLowerCase()] ||
-                          Object.entries(categoryMedia).find(([key]) => key.toUpperCase() === cat.toUpperCase())?.[1];
+            const media = activeCategoryMedia[cat] || 
+                          activeCategoryMedia[cat.toUpperCase()] || 
+                          activeCategoryMedia[cat.toLowerCase()] ||
+                          Object.entries(activeCategoryMedia).find(([key]) => key.toUpperCase() === cat.toUpperCase())?.[1];
 
             return (
               <React.Fragment key={cat}>
@@ -316,17 +331,28 @@ export default function Home() {
                   to={`/collection?category=${encodeURIComponent(cat)}`}
                   className="category-media group block cursor-pointer"
                 >
-                  {media ? (
-                    media.type === "video" ? (
-                      <video src={media.url} autoPlay loop muted playsInline className="brightness-75" />
-                    ) : (
-                      <img src={media.url} alt={cat} className="brightness-75" />
-                    )
-                  ) : (
-                    <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
-                       <span className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{cat}_VISUAL_PENDING</span>
-                    </div>
-                  )}
+                  <AnimatePresence mode="popLayout">
+                    <motion.div
+                      key={media?.url || 'placeholder'}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 1 }}
+                      className="absolute inset-0 w-full h-full"
+                    >
+                      {media ? (
+                        media.type === "video" ? (
+                          <video src={media.url} autoPlay loop muted playsInline className="brightness-75 w-full h-full object-cover" />
+                        ) : (
+                          <img src={media.url} alt={cat} className="brightness-75 w-full h-full object-cover" />
+                        )
+                      ) : (
+                        <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
+                           <span className="text-[10px] font-tech text-white/20 uppercase tracking-[0.5em]">{cat}_VISUAL_PENDING</span>
+                        </div>
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
                   
                   {/* Transparent 'SHOP' Box Overlay */}
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors z-10">
@@ -348,3 +374,4 @@ export default function Home() {
     </div>
   );
 }
+
