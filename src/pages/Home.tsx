@@ -303,7 +303,11 @@ export default function Home() {
         ) : (
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
-            const media = categoryMedia[cat];
+            // Resilient lookup: try exact match, then case-insensitive match
+            const media = categoryMedia[cat] || 
+                          categoryMedia[cat.toUpperCase()] || 
+                          categoryMedia[cat.toLowerCase()] ||
+                          Object.entries(categoryMedia).find(([key]) => key.toUpperCase() === cat.toUpperCase())?.[1];
 
             return (
               <React.Fragment key={cat}>
