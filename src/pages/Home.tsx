@@ -128,33 +128,34 @@ const TheeUniteReveal = ({ title, onComplete }: { title: string, onComplete: () 
 };
 
 export default function Home() {
-  const [mainHero, setMainHero] = useState<HeroSettings>({
+  const defaultHero: HeroSettings = {
     title: 'THEE UNITE',
     tagline: 'EST 2024',
     subtitle: 'FOR EVERY SOUL THAT DARES TO DREAM',
     bgUrl: '/hero-video.mp4',
     bgType: 'video'
-  });
-  const [activeHero, setActiveHero] = useState<HeroSettings | null>(null);
+  };
+
+  const [mainHero, setMainHero] = useState<HeroSettings>(defaultHero);
+  const [activeHero, setActiveHero] = useState<HeroSettings>(defaultHero);
   const [videoCanPlay, setVideoCanPlay] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   
+  const [groupedProducts, setGroupedProducts] = useState<Record<string, Product[]>>({});
   const [categoryMedia, setCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
   const [loading, setLoading] = useState(true);
-  const activeHeroRef = useRef<HeroSettings | null>(null);
+  const activeHeroRef = useRef<HeroSettings>(defaultHero);
 
   useEffect(() => {
     const loadProducts = async () => {
       try {
         const prodData = await fetchProducts();
-        // Group products by category
         const grouped = prodData.reduce((acc, product) => {
           const cat = product.category || 'GENERAL';
           if (!acc[cat]) acc[cat] = [];
           acc[cat].push(product);
           return acc;
         }, {} as Record<string, Product[]>);
-        
         setGroupedProducts(grouped);
       } catch (error) {
         console.error("Error loading products:", error);
@@ -163,7 +164,6 @@ export default function Home() {
     loadProducts();
   }, []);
 
-  // Live updates for all settings (Main Hero and Category Media)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'settings'), (snapshot) => {
       const allSettings = snapshot.docs.reduce((acc, doc) => {
@@ -171,30 +171,22 @@ export default function Home() {
         return acc;
       }, {} as any);
       
-      // 1. Set Category Media Map
       setCategoryMedia(allSettings.categoryMedia || {});
 
-      // 2. Update Main Hero
       const mainHeroDoc = allSettings.hero;
       if (mainHeroDoc) {
         const data = mainHeroDoc;
         const newData: HeroSettings = {
-          title: data.title || 'THEE UNITE',
-          tagline: data.tagline || 'EST 2024',
-          subtitle: data.subtitle || '',
-          bgUrl: data.backgroundUrl || data.bgUrl || '/hero-video.mp4',
-          bgType: data.backgroundType || data.bgType || 'video'
+          title: data.title || defaultHero.title,
+          tagline: data.tagline || defaultHero.tagline,
+          subtitle: data.subtitle || defaultHero.subtitle,
+          bgUrl: data.backgroundUrl || data.bgUrl || defaultHero.bgUrl,
+          bgType: data.backgroundType || data.bgType || defaultHero.bgType
         };
         
         const currentActive = activeHeroRef.current;
 
-        if (!currentActive) {
-          preloadAsset(newData).then(() => {
-            setMainHero(newData);
-            setActiveHero(newData);
-            activeHeroRef.current = newData;
-          });
-        } else if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
+        if (newData.bgUrl !== currentActive.bgUrl || newData.bgType !== currentActive.bgType) {
           preloadAsset(newData).then(() => {
             setMainHero(newData);
             setIsTransitioning(true);
@@ -224,7 +216,6 @@ export default function Home() {
       if (settings.bgType === 'video') {
         const video = document.createElement('video');
         video.src = settings.bgUrl;
-        video.preload = 'auto';
         video.oncanplaythrough = () => resolve();
         video.onerror = () => resolve();
       } else {
@@ -236,7 +227,6 @@ export default function Home() {
     });
   };
 
-  // Sort categories: PREMIUM first, then others
   const categories = Object.keys(groupedProducts).sort((a, b) => {
     if (a.toUpperCase() === 'PREMIUM') return -1;
     if (b.toUpperCase() === 'PREMIUM') return 1;
@@ -244,74 +234,30 @@ export default function Home() {
   });
 
   return (
-    <div className="bg-black">
+    <div className="bg-black text-white min-h-screen">
       <style>{`
-        .category-media {
-          width: 100%;
-          height: 70vh;
-          margin: 40px 0;
-          overflow: hidden;
-        }
-        .category-media img,
-        .category-media video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
+        .category-media { width: 100%; height: 70vh; margin: 40px 0; overflow: hidden; }
+        .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; }
       `}</style>
 
       {/* Main Hero Section */}
       <section className="h-screen relative overflow-hidden flex items-center justify-center bg-black w-full">
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           <AnimatePresence mode="popLayout">
-            {activeHero && (
-              <motion.div
-                key={activeHero.bgUrl + activeHero.bgType}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 w-full h-full"
-              >
-                {activeHero.bgType === 'video' ? (
-                  <video
-                    autoPlay loop muted playsInline preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7]"
-                    src={activeHero.bgUrl}
-                  />
-                ) : (
-                  <img 
-                    src={activeHero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
-                    alt="Hero Background"
-                  />
-                )}
-              </motion.div>
-            )}
-
-            {isTransitioning && mainHero.bgUrl !== activeHero?.bgUrl && (
-              <motion.div
-                key={mainHero.bgUrl + mainHero.bgType + "_preloading"}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 w-full h-full z-10"
-              >
-                {mainHero.bgType === 'video' ? (
-                  <video
-                    autoPlay loop muted playsInline preload="auto"
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.7]"
-                    src={mainHero.bgUrl}
-                  />
-                ) : (
-                  <img 
-                    src={mainHero.bgUrl}
-                    className="absolute inset-0 w-full h-full object-cover brightness-[0.8]"
-                    alt="Hero Background"
-                  />
-                )}
-              </motion.div>
-            )}
+            <motion.div
+              key={activeHero.bgUrl + activeHero.bgType}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 1 }}
+              className="absolute inset-0 w-full h-full"
+            >
+              {activeHero.bgType === 'video' ? (
+                <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover brightness-[0.7]" src={activeHero.bgUrl} />
+              ) : (
+                <img src={activeHero.bgUrl} className="absolute inset-0 w-full h-full object-cover brightness-[0.8]" alt="Hero" />
+              )}
+            </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/30 z-20" />
         </div>
@@ -320,8 +266,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto w-full">
             <motion.p
               initial={{ opacity: 0, y: 20 }}
-              animate={videoCanPlay ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ delay: 0.3, duration: 0.8 }}
+              animate={{ opacity: 1, y: 0 }}
               className="font-tech text-xs tracking-[0.4em] uppercase text-white mb-4"
             >
               {mainHero.tagline}
@@ -333,26 +278,21 @@ export default function Home() {
 
             <motion.div
               initial={{ opacity: 0, y: 20 }}
-              animate={videoCanPlay ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ delay: 0.7, duration: 0.8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
               className="flex flex-row items-center justify-center gap-4"
             >
               <Link to="/collection" className="min-w-[160px] py-4 bg-white text-black font-black uppercase text-[10px] tracking-[0.2em] hover:bg-accent transition-colors">Shop Now</Link>
               <Link to="/gallery" className="min-w-[160px] py-4 border border-white/30 backdrop-blur-md text-white font-black uppercase text-[10px] tracking-[0.2em] hover:bg-white/10 transition-colors">The Story</Link>
             </motion.div>
           </div>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={videoCanPlay ? { opacity: 1 } : { opacity: 0 }}
-            transition={{ delay: 1.2, duration: 1 }}
-            className="absolute bottom-8 left-1/2 -translate-x-1/2"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }} className="absolute bottom-8 left-1/2 -translate-x-1/2">
             <div className="w-1 h-12 bg-gradient-to-b from-white to-transparent opacity-20" />
           </motion.div>
         </div>
       </section>
       
-      {/* Dynamic Content: Category Products -> Category Media */}
+      {/* Dynamic Content */}
       <div className="relative z-30 bg-black">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center text-accent font-tech">
@@ -363,10 +303,8 @@ export default function Home() {
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
             const media = categoryMedia[cat];
-
             return (
               <React.Fragment key={cat}>
-                {/* Category Products */}
                 <div className="py-24">
                   <div className="px-8 mb-12 flex items-end justify-between">
                     <div>
@@ -377,26 +315,11 @@ export default function Home() {
                       VIEW FULL COLLECTION <ChevronRight size={14} />
                     </Link>
                   </div>
-                  <RunwayProducts 
-                    products={products} 
-                    showCart={index === categories.length - 1} 
-                  />
+                  <RunwayProducts products={products} showCart={index === categories.length - 1} />
                 </div>
-
-                {/* Simplified Media Block (ALWAYS BELOW PRODUCTS) */}
                 {media && (
                   <div className="category-media">
-                    {media.type === "video" ? (
-                      <video
-                        src={media.url}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                      />
-                    ) : (
-                      <img src={media.url} alt={cat} />
-                    )}
+                    {media.type === "video" ? <video src={media.url} autoPlay loop muted playsInline /> : <img src={media.url} alt={cat} />}
                   </div>
                 )}
               </React.Fragment>
