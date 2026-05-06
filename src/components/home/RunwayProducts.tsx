@@ -90,7 +90,7 @@ const RunwayProducts: React.FC<RunwayProductsProps> = ({
   }
 
   return (
-    <div className="relative bg-black py-10 min-h-[400px]">
+    <div className="relative bg-black py-4">
       {products.length === 0 ? (
         <div className="flex items-center justify-center h-40 border border-dashed border-white/10 mx-8 rounded-2xl text-white/20 font-tech text-[10px] uppercase tracking-widest">
           No items manifested in core catalog
@@ -98,15 +98,17 @@ const RunwayProducts: React.FC<RunwayProductsProps> = ({
       ) : (
         <div 
           ref={rowRef}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-8 gap-2 px-8"
+          className="flex flex-row overflow-x-auto overflow-y-hidden scrollbar-hide px-8 gap-4 scroll-smooth"
+          style={{ WebkitOverflowScrolling: 'touch' }}
         >
           {products.map((product, index) => (
-            <RunwayItem 
-              key={product.id} 
-              product={product} 
-              index={index} 
-              onAddToCart={handleAddToCart}
-            />
+            <div key={product.id} className="flex-shrink-0 w-[180px] md:w-[220px]">
+              <RunwayItem 
+                product={product} 
+                index={index} 
+                onAddToCart={handleAddToCart}
+              />
+            </div>
           ))}
         </div>
       )}

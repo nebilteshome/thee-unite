@@ -236,7 +236,7 @@ export default function Home() {
   return (
     <div className="bg-black text-white min-h-screen">
       <style>{`
-        .category-media { width: 100%; height: 70vh; margin: 40px 0; overflow: hidden; }
+        .category-media { width: 100%; height: 70vh; margin: 0; overflow: hidden; }
         .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; }
       `}</style>
 
@@ -305,23 +305,31 @@ export default function Home() {
             const media = categoryMedia[cat];
             return (
               <React.Fragment key={cat}>
-                <div className="py-24">
-                  <div className="px-8 mb-12 flex items-end justify-between">
-                    <div>
-                      <span className="text-accent font-tech text-[10px] tracking-[0.4em] uppercase mb-2 block">CATALOG_SCAN</span>
-                      <h3 className="text-5xl font-display font-medium uppercase italic tracking-tighter">{cat}</h3>
+                {/* Simplified Media Block (Link to Collection Category) */}
+                {media && (
+                  <Link 
+                    to={`/collection?category=${encodeURIComponent(cat)}`}
+                    className="category-media relative group block cursor-pointer"
+                  >
+                    {media.type === "video" ? (
+                      <video src={media.url} autoPlay loop muted playsInline />
+                    ) : (
+                      <img src={media.url} alt={cat} />
+                    )}
+                    
+                    {/* Transparent 'SHOP' Box Overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition-colors">
+                      <div className="border border-white/30 bg-black/10 backdrop-blur-md px-10 py-4 font-black uppercase text-sm tracking-[0.4em] text-white hover:bg-white hover:text-black transition-all">
+                        SHOP
+                      </div>
                     </div>
-                    <Link to="/collection" className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-accent transition-colors flex items-center gap-4">
-                      VIEW FULL COLLECTION <ChevronRight size={14} />
-                    </Link>
-                  </div>
+                  </Link>
+                )}
+
+                {/* Category Products (Seamless below media) */}
+                <div className="bg-black">
                   <RunwayProducts products={products} showCart={index === categories.length - 1} />
                 </div>
-                {media && (
-                  <div className="category-media">
-                    {media.type === "video" ? <video src={media.url} autoPlay loop muted playsInline /> : <img src={media.url} alt={cat} />}
-                  </div>
-                )}
               </React.Fragment>
             );
           })
