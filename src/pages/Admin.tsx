@@ -817,38 +817,65 @@ export function GalleryManager() {
 
 export function HeroManager() {
   const [categoryMedia, setCategoryMedia] = useState<Record<string, { url: string, type: 'image' | 'video' }>>({});
+  const [heroSettings, setHeroSettings] = useState<HeroSettings>({
+    title: 'THEE UNITE',
+    tagline: 'EST 2024',
+    subtitle: 'FOR EVERY SOUL THAT DARES TO DREAM',
+    bgUrl: '/hero-video.mp4',
+    bgType: 'video'
+  });
   const [categories, setCategories] = useState<string[]>([]);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
+  const [activeTab, setActiveTab] = useState<'hero' | 'categories'>('hero');
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        // 1. Fetch Products to get unique categories
-        const prodSnap = await getDocs(collection(db, 'products'));
-        const uniqueCats = Array.from(new Set(prodSnap.docs.map(d => d.data().category).filter(Boolean)));
-        setCategories(uniqueCats);
-
-        // 2. Fetch category media from settings/categoryMedia
-        const mediaSnap = await getDoc(doc(db, 'settings', 'categoryMedia'));
-        if (mediaSnap.exists()) {
-          setCategoryMedia(mediaSnap.data() as any);
-        }
-      } catch (error: any) {
-        console.error("MEDIA_MANAGER: Sync Error:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) fetchData();
+    // 1. Listen for Products to get unique categories
+    const unsubProducts = onSnapshot(collection(db, 'products'), (snapshot) => {
+      const uniqueCats = Array.from(new Set(snapshot.docs.map(d => d.data().category || 'GENERAL').filter(Boolean)));
+      setCategories(uniqueCats.sort());
     });
-    return () => unsubscribe();
+
+    // 2. Listen for Settings (Hero and Category Media)
+    const unsubSettings = onSnapshot(collection(db, 'settings'), (snapshot) => {
+      snapshot.docs.forEach(doc => {
+        if (doc.id === 'categoryMedia') {
+          setCategoryMedia(doc.data() as any);
+        } else if (doc.id === 'hero') {
+          const data = doc.data();
+          setHeroSettings({
+            title: data.title || 'THEE UNITE',
+            tagline: data.tagline || 'EST 2024',
+            subtitle: data.subtitle || 'FOR EVERY SOUL THAT DARES TO DREAM',
+            bgUrl: data.bgUrl || data.backgroundUrl || '/hero-video.mp4',
+            bgType: data.bgType || data.backgroundType || 'video'
+          });
+        }
+      });
+      setLoading(false);
+    });
+
+    return () => {
+      unsubProducts();
+      unsubSettings();
+    };
   }, []);
+
+  const handleSaveHero = async (updates: Partial<HeroSettings>) => {
+    setSaving(true);
+    try {
+      await auth.currentUser?.getIdToken(true);
+      const newSettings = { ...heroSettings, ...updates };
+      await setDoc(doc(db, 'settings', 'hero'), newSettings);
+      alert('Main Hero Synchronized');
+    } catch (error: any) {
+      alert(`Save Failed: ${error.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleSaveMedia = async (category: string, url: string, type: 'image' | 'video') => {
     setSaving(true);
@@ -856,7 +883,6 @@ export function HeroManager() {
       await auth.currentUser?.getIdToken(true);
       const newMedia = { ...categoryMedia, [category]: { url, type } };
       await setDoc(doc(db, 'settings', 'categoryMedia'), newMedia);
-      setCategoryMedia(newMedia);
       alert(`${category.toUpperCase()} Media Synchronized`);
     } catch (error: any) {
       alert(`Save Failed: ${error.message}`);
@@ -869,10 +895,15 @@ export function HeroManager() {
 
   return (
     <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-      {showPicker && editingCategory && (
+      {showPicker && (
         <AssetPicker 
-          onSelect={(url) => { 
-            handleSaveMedia(editingCategory, url, url.endsWith('.mp4') ? 'video' : 'image');
+          onSelect={async (url) => { 
+            const type = url.endsWith('.mp4') ? 'video' : 'image';
+            if (editingCategory) {
+              await handleSaveMedia(editingCategory, url, type);
+            } else {
+              await handleSaveHero({ bgUrl: url, bgType: type });
+            }
             setShowPicker(false);
             setEditingCategory(null);
           }} 
@@ -880,80 +911,141 @@ export function HeroManager() {
         />
       )}
 
-      <header className="flex justify-between items-end mb-12">
-        <div>
-          <h2 className="text-4xl font-black italic uppercase tracking-tighter">CATEGORY_MEDIA</h2>
-          <p className="text-[10px] font-tech text-white/20 mt-2">ASSIGN VISUALS TO PRODUCT FLOWS</p>
+      <header className="mb-12">
+        <div className="flex justify-between items-end mb-8">
+          <div>
+            <h2 className="text-4xl font-black italic uppercase tracking-tighter">HERO_CORE</h2>
+            <p className="text-[10px] font-tech text-white/20 mt-2">ARCHITECT THE FIRST IMPRESSION</p>
+          </div>
+          <div className="flex gap-4 border-b border-white/10 pb-2">
+            <button 
+              onClick={() => setActiveTab('hero')}
+              className={`text-[10px] font-black uppercase tracking-widest pb-2 px-4 transition-all ${activeTab === 'hero' ? 'text-accent border-b-2 border-accent' : 'text-white/20'}`}
+            >
+              MAIN HERO
+            </button>
+            <button 
+              onClick={() => setActiveTab('categories')}
+              className={`text-[10px] font-black uppercase tracking-widest pb-2 px-4 transition-all ${activeTab === 'categories' ? 'text-accent border-b-2 border-accent' : 'text-white/20'}`}
+            >
+              CATEGORIES ({categories.length})
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {categories.map(cat => {
-          const media = categoryMedia[cat];
-          return (
-            <div key={cat} className="bg-surface/20 border border-white/5 p-6 flex flex-col gap-4 group hover:border-accent/30 transition-all">
-              <div className="flex justify-between items-start">
-                <h3 className="font-black italic uppercase text-lg">{cat}</h3>
-                <span className="text-[8px] font-tech text-accent/40">FLOW_BLOCK</span>
-              </div>
+      {activeTab === 'hero' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Hero Preview */}
+          <div className="relative aspect-video bg-black border border-white/10 overflow-hidden group">
+            {heroSettings.bgType === 'video' ? (
+              <video src={heroSettings.bgUrl} className="w-full h-full object-cover opacity-60" autoPlay loop muted />
+            ) : (
+              <img src={heroSettings.bgUrl} className="w-full h-full object-cover opacity-60" alt="Preview" />
+            )}
+            <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center bg-black/40 backdrop-blur-[2px]">
+              <p className="text-[8px] font-tech tracking-[0.4em] text-white/40 mb-2 uppercase">{heroSettings.tagline}</p>
+              <h3 className="text-4xl font-black italic uppercase tracking-tighter mb-4">{heroSettings.title}</h3>
+              <p className="text-[10px] font-medium uppercase tracking-widest text-white/60 max-w-sm">{heroSettings.subtitle}</p>
+            </div>
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/60 backdrop-blur-md">
+              <button 
+                onClick={() => { setEditingCategory(null); setShowPicker(true); }}
+                className="bg-accent text-black px-8 py-4 font-black text-xs tracking-widest uppercase hover:scale-105 transition-transform"
+              >
+                CHANGE BACKGROUND
+              </button>
+            </div>
+          </div>
 
-              <div className="relative aspect-video bg-black border border-white/10 overflow-hidden flex items-center justify-center">
-                {media ? (
-                  media.type === 'video' ? (
-                    <video src={media.url} className="w-full h-full object-cover opacity-60" autoPlay loop muted />
+          {/* Hero Form */}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Title" value={heroSettings.title} onChange={v => setHeroSettings(p => ({ ...p, title: v }))} />
+              <Input label="Tagline" value={heroSettings.tagline} onChange={v => setHeroSettings(p => ({ ...p, tagline: v }))} />
+            </div>
+            <Input label="Subtitle" value={heroSettings.subtitle} onChange={v => setHeroSettings(p => ({ ...p, subtitle: v }))} />
+            <div className="flex gap-4">
+              <button 
+                onClick={() => handleSaveHero({})}
+                disabled={saving}
+                className="flex-1 bg-white text-black py-4 font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-3 hover:bg-accent transition-colors disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} />} SYNC_MANIFEST
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {categories.map(cat => {
+            const media = categoryMedia[cat];
+            return (
+              <div key={cat} className="bg-surface/20 border border-white/5 p-6 flex flex-col gap-4 group hover:border-accent/30 transition-all">
+                <div className="flex justify-between items-start">
+                  <h3 className="font-black italic uppercase text-lg">{cat}</h3>
+                  <span className="text-[8px] font-tech text-accent/40">FLOW_BLOCK</span>
+                </div>
+
+                <div className="relative aspect-video bg-black border border-white/10 overflow-hidden flex items-center justify-center">
+                  {media ? (
+                    media.type === 'video' ? (
+                      <video src={media.url} className="w-full h-full object-cover opacity-60" autoPlay loop muted />
+                    ) : (
+                      <img src={media.url} className="w-full h-full object-cover opacity-60" />
+                    )
                   ) : (
-                    <img src={media.url} className="w-full h-full object-cover opacity-60" />
-                  )
-                ) : (
-                  <div className="text-[10px] font-tech text-white/10 uppercase tracking-widest">No Media Assigned</div>
-                )}
-                
-                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm">
-                   <div className="flex gap-2">
-                    <button 
-                      onClick={() => { setEditingCategory(cat); setShowPicker(true); }}
-                      className="bg-accent text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase hover:scale-105 transition-transform"
-                    >
-                      {media ? 'REPLACE' : 'ASSIGN'}
-                    </button>
-                    <label className="bg-white text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase cursor-pointer hover:scale-105 transition-transform">
-                      UPLOAD
-                      <input 
-                        type="file" 
-                        className="hidden" 
-                        accept="image/*,video/*" 
-                        onChange={async (e) => {
-                          if (!e.target.files?.length) return;
-                          setSaving(true);
-                          try {
-                            const file = e.target.files[0];
-                            const url = await uploadFile(file, `category_media/${Date.now()}_${file.name}`);
-                            await handleSaveMedia(cat, url, file.type.startsWith('video') ? 'video' : 'image');
-                          } catch (err) {
-                            alert('Upload failed');
-                          } finally {
-                            setSaving(false);
-                          }
-                        }} 
-                      />
-                    </label>
+                    <div className="text-[10px] font-tech text-white/10 uppercase tracking-widest">No Media Assigned</div>
+                  )}
+                  
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-sm">
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => { setEditingCategory(cat); setShowPicker(true); }}
+                        className="bg-accent text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase hover:scale-105 transition-transform"
+                      >
+                        {media ? 'REPLACE' : 'ASSIGN'}
+                      </button>
+                      <label className="bg-white text-black px-4 py-2 font-black text-[10px] tracking-widest uppercase cursor-pointer hover:scale-105 transition-transform">
+                        UPLOAD
+                        <input 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*,video/*" 
+                          onChange={async (e) => {
+                            if (!e.target.files?.length) return;
+                            setSaving(true);
+                            try {
+                              const file = e.target.files[0];
+                              const url = await uploadFile(file, `category_media/${Date.now()}_${file.name}`);
+                              await handleSaveMedia(cat, url, file.type.startsWith('video') ? 'video' : 'image');
+                            } catch (err) {
+                              alert('Upload failed');
+                            } finally {
+                              setSaving(false);
+                            }
+                          }} 
+                        />
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-2 mt-auto">
-                <div className={`w-1.5 h-1.5 rounded-full ${media ? 'bg-green-500' : 'bg-red-500/20'}`} />
-                <span className="text-[9px] font-tech text-white/30 uppercase">
-                  {media ? `MANIFESTED: ${media.type}` : 'PENDING_ASSIGNMENT'}
-                </span>
+                <div className="flex items-center gap-2 mt-auto">
+                  <div className={`w-1.5 h-1.5 rounded-full ${media ? 'bg-green-500' : 'bg-red-500/20'}`} />
+                  <span className="text-[9px] font-tech text-white/30 uppercase">
+                    {media ? `MANIFESTED: ${media.type}` : 'PENDING_ASSIGNMENT'}
+                  </span>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </motion.div>
   );
 }
+
 
 export function PolicyManager() {
   const [policies, setPolicies] = useState<Policies>({ sizeGuide: '', shipping: '', returns: '' });
