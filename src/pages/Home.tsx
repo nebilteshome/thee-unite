@@ -170,12 +170,9 @@ export default function Home() {
 
           // Apply preloading logic to each category media change
           Object.entries(newCategoryMedia).forEach(([cat, media]: [string, any]) => {
-            const currentActive = activeCategoryMedia[cat];
-            if (!currentActive || media.url !== currentActive.url) {
-              preloadSingleAsset(media.url, media.type).then(() => {
-                setActiveCategoryMedia(prev => ({ ...prev, [cat]: media }));
-              });
-            }
+            preloadSingleAsset(media.url, media.type).then(() => {
+              setActiveCategoryMedia(prev => ({ ...prev, [cat]: media }));
+            });
           });
         } else if (doc.id === 'hero') {
           const data = doc.data();
@@ -250,13 +247,13 @@ export default function Home() {
   return (
     <div className="bg-black text-white min-h-screen">
       <style>{`
-        .category-media { width: 100%; min-height: 100vh; min-height: 100dvh; margin: 0; overflow: hidden; position: relative; }
+        .category-media { width: 100%; height: 100vh; height: 100dvh; margin: 0; overflow: hidden; position: relative; display: block; }
         .category-media img, .category-media video { width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .seamless-products { margin-top: 0; padding-top: 0; }
       `}</style>
 
       {/* Main Hero Section */}
-      <section className="min-h-screen min-h-[100dvh] relative overflow-hidden flex items-center justify-center bg-black w-full">
+      <section className="h-screen h-[100dvh] relative overflow-hidden flex items-center justify-center bg-black w-full">
         <div className="absolute inset-0 w-full h-full overflow-hidden pointer-events-none">
           <AnimatePresence mode="popLayout">
             <motion.div
@@ -318,30 +315,33 @@ export default function Home() {
           categories.map((cat, index) => {
             const products = groupedProducts[cat];
             
-            // Resilient lookup: try exact match, then case-insensitive match
-            const media = activeCategoryMedia[cat] || 
-                          activeCategoryMedia[cat.toUpperCase()] || 
-                          activeCategoryMedia[cat.toLowerCase()] ||
-                          Object.entries(activeCategoryMedia).find(([key]) => key.toUpperCase() === cat.toUpperCase())?.[1];
+            // Resilient lookup: try active (preloaded) then raw (immediate fallback)
+            const getMedia = (source: any) => 
+              source[cat] || 
+              source[cat.toUpperCase()] || 
+              source[cat.toLowerCase()] ||
+              Object.entries(source).find(([key]) => key.toUpperCase() === cat.toUpperCase())?.[1];
+
+            const media = getMedia(activeCategoryMedia) || getMedia(categoryMedia);
 
             return (
               <React.Fragment key={cat}>
                 {/* Category Media Block (100vh - Same as Hero) */}
-                <div className="category-media group block">
-                  <AnimatePresence mode="popLayout">
+                <div className="category-media group">
+                  <AnimatePresence mode="wait">
                     <motion.div
                       key={media?.url || 'placeholder'}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      transition={{ duration: 1 }}
+                      transition={{ duration: 0.5 }}
                       className="absolute inset-0 w-full h-full"
                     >
                       {media ? (
                         media.type === "video" ? (
-                          <video src={media.url} autoPlay loop muted playsInline className="brightness-75 w-full h-full object-cover" />
+                          <video src={media.url} autoPlay loop muted playsInline className="brightness-75 w-full h-full object-cover object-center" />
                         ) : (
-                          <img src={media.url} alt={cat} className="brightness-75 w-full h-full object-cover" />
+                          <img src={media.url} alt={cat} className="brightness-75 w-full h-full object-cover object-center" />
                         )
                       ) : (
                         <div className="w-full h-full bg-neutral-900 flex items-center justify-center">
